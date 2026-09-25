@@ -1131,6 +1131,28 @@ input[type="range"] {
   font: inherit;
 }
 
+.auth-password-field {
+  position: relative;
+  display: flex;
+}
+
+.auth-password-field input {
+  padding-right: 64px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--primary-dark);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 8px;
+}
+
 .auth-submit {
   margin-top: 6px;
 }
@@ -1146,12 +1168,22 @@ input[type="range"] {
   font-size: 0.75rem;
 }
 
-.auth-toggle {
+.auth-links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.auth-toggle,
+.auth-forgot {
   background: transparent;
   border: none;
   padding: 0;
   color: var(--primary-dark);
   font-weight: 700;
+  font-size: 0.8rem;
 }
 
 .site-footer {
