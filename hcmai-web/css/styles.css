@@ -1186,6 +1186,44 @@ input[type="range"] {
   font-size: 0.8rem;
 }
 
+.profile-menu {
+  z-index: 130;
+  min-width: 200px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+  padding: 14px 16px;
+  display: grid;
+  gap: 4px;
+}
+
+.profile-menu-email {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.profile-menu-email-value {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.profile-logout {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #b42318;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
 .site-footer {
   display: flex;
   flex-direction: column;

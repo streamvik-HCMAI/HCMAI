@@ -231,14 +231,65 @@ function openAuthModal(mode = 'login') {
   emailInput.focus();
 }
 
+function closeProfileMenu() {
+  const existing = document.getElementById('profile-menu');
+  if (!existing) return;
+  existing.remove();
+  document.removeEventListener('keydown', existing._onKeydown);
+  document.removeEventListener('click', existing._onOutsideClick);
+}
+
+function openProfileMenu(anchorButton) {
+  closeProfileMenu();
+
+  const menu = document.createElement('div');
+  menu.id = 'profile-menu';
+  menu.className = 'profile-menu';
+  const email = auth.currentUser?.email || 'Signed in';
+
+  menu.innerHTML = `
+    <p class="profile-menu-email">${appState.isAdmin ? 'Admin account' : 'Signed in as'}</p>
+    <p class="profile-menu-email-value"></p>
+    <button type="button" class="text-link profile-logout">Log out</button>
+  `;
+  menu.querySelector('.profile-menu-email-value').textContent = email;
+
+  document.body.appendChild(menu);
+
+  const rect = anchorButton.getBoundingClientRect();
+  menu.style.position = 'absolute';
+  menu.style.top = `${window.scrollY + rect.bottom + 8}px`;
+  menu.style.right = `${document.documentElement.clientWidth - (rect.right + window.scrollX)}px`;
+
+  menu.querySelector('.profile-logout').addEventListener('click', () => {
+    closeProfileMenu();
+    signOut(auth).catch((error) => {
+      console.error('Sign out failed.', error);
+    });
+  });
+
+  menu._onKeydown = (event) => {
+    if (event.key === 'Escape') closeProfileMenu();
+  };
+  menu._onOutsideClick = (event) => {
+    if (!menu.contains(event.target) && event.target !== anchorButton) closeProfileMenu();
+  };
+  document.addEventListener('keydown', menu._onKeydown);
+  // Deferred so the opening click doesn't immediately trigger the outside-click handler.
+  setTimeout(() => document.addEventListener('click', menu._onOutsideClick), 0);
+}
+
 function bindAuth() {
   const loginButtons = document.querySelectorAll('.auth-button');
   loginButtons.forEach((button) => {
     button.addEventListener('click', () => {
       if (appState.isAuthenticated) {
-        signOut(auth).catch((error) => {
-          console.error('Sign out failed.', error);
-        });
+        const isMenuOpen = document.getElementById('profile-menu');
+        if (isMenuOpen) {
+          closeProfileMenu();
+        } else {
+          openProfileMenu(button);
+        }
         return;
       }
       openAuthModal('login');
@@ -269,6 +320,7 @@ onAuthStateChanged(auth, async (user) => {
     console.error('Unable to verify account claims.', error);
   }
 
+  closeProfileMenu();
   setAuthState({
     isAuthenticated: Boolean(user),
     isAdmin
