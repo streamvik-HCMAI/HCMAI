@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "hcmai-v3e0h9"
+    "default": "hcmai-dev",
+    "dev": "hcmai-dev",
+    "prod": "hcmai-v3e0h9"
   }
 }

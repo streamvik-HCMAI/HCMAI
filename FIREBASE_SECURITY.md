@@ -30,3 +30,22 @@ The Google identity used for Application Default Credentials must have permissio
 After changing claims, the user must sign out and sign in again, or refresh the ID token. To remove access, set `{ admin: false }` or revoke the user session from the trusted Admin SDK environment.
 
 The rules allow published raags to be read publicly, require authentication for protected topics and audio, and restrict all raag/topic writes and audio uploads to users with the verified `admin` claim.
+
+## Environment-aware website
+
+The website selects Firebase by hostname:
+
+- `localhost`, `127.0.0.1`, `.local`, and `hcmai-dev.web.app` use `hcmai-dev`.
+- Other hosts use production project `hcmai-v3e0h9`.
+
+Deploy development rules and hosting with:
+
+```powershell
+firebase deploy --project dev --only firestore:rules,storage,hosting
+```
+
+Deploy production only after reviewing the production pull request:
+
+```powershell
+firebase deploy --project prod --only firestore:rules,storage,hosting
+```
