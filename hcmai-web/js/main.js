@@ -52,6 +52,9 @@ if (playToggle && playIcon && selectedScaleLabel && scaleButtons.length) {
       if (tanpuraAudio) {
         const fileName = button.textContent.trim().replace('#', 'sharp');
         tanpuraAudio.src = `assets/tanpura_${fileName}.mp3`;
+        tanpuraAudio.playbackRate = ['G#', 'A', 'B'].includes(button.textContent.trim())
+          ? Math.pow(2, -1 / 12)
+          : 1;
         if (isPlaying) tanpuraAudio.play().catch(() => {});
       }
     });
