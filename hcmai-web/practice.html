@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="HCMAI" />
     <title>Practice | HCMAI</title>
-    <meta name="description" content="Daily riyaz practice with a tanpura-inspired drone, note selection, and rhythm tools." />
+    <meta name="description" content="Daily riyaz practice with a tanpura drone and looping YouTube clips." />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -101,6 +101,59 @@
             </ul>
           </div>
         </aside>
+      </section>
+      <section class="clip-loop-section" aria-labelledby="clipLoopTitle">
+        <div class="section-surface clip-loop-panel">
+          <div class="clip-loop-header">
+            <p class="eyebrow">Phrase practice</p>
+            <h2 id="clipLoopTitle">Loop a YouTube clip</h2>
+          </div>
+
+          <form id="clipVideoForm" class="clip-url-form">
+            <label for="youtubeVideoUrl">YouTube video link</label>
+            <div class="clip-url-row">
+              <input
+                id="youtubeVideoUrl"
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=..."
+                autocomplete="url"
+                required
+              />
+              <button id="loadClipVideo" class="primary-btn" type="submit">Load video</button>
+            </div>
+          </form>
+          <p class="clip-privacy-note">The video plays in YouTube's embedded player. YouTube may receive playback data.</p>
+          <p id="clipLoopStatus" class="clip-loop-status" role="status" aria-live="polite"></p>
+          <a id="openClipVideoLink" class="clip-fallback-link" target="_blank" rel="noopener noreferrer" hidden>Open video on YouTube</a>
+
+          <div id="clipWorkspace" class="clip-workspace" hidden>
+            <div class="clip-player-frame">
+              <div id="youtubePlayer"></div>
+            </div>
+            <div class="clip-position">
+              <span>Current position</span>
+              <strong id="clipCurrentTime">0:00</strong>
+            </div>
+            <div class="clip-boundaries">
+              <div class="clip-boundary">
+                <label for="clipStartTime">Clip starts at (timestamp)</label>
+                <div class="clip-boundary-control">
+                  <input id="clipStartTime" type="text" inputmode="numeric" placeholder="0:00" value="0:00" disabled />
+                  <button id="markClipStart" class="secondary-btn small" type="button" disabled>Mark start</button>
+                </div>
+              </div>
+              <div class="clip-boundary">
+                <label for="clipEndTime">Clip ends at (timestamp)</label>
+                <div class="clip-boundary-control">
+                  <input id="clipEndTime" type="text" inputmode="numeric" placeholder="0:10" value="0:10" disabled />
+                  <button id="markClipEnd" class="secondary-btn small" type="button" disabled>Mark end</button>
+                </div>
+              </div>
+            </div>
+            <p id="clipDurationHint" class="clip-time-hint">Load a video to see its maximum timestamp.</p>
+            <button id="clipLoopToggle" class="primary-btn" type="button" disabled>Play clip loop</button>
+          </div>
+        </div>
       </section>
     </main>
 

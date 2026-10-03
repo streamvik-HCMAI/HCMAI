@@ -821,6 +821,137 @@ input[type="range"] {
   line-height: 1.9;
 }
 
+.clip-loop-section {
+  margin-top: 20px;
+}
+
+.clip-loop-header h2 {
+  margin-bottom: 18px;
+  font-size: 1.4rem;
+}
+
+.clip-url-form,
+.clip-boundary {
+  display: grid;
+  gap: 8px;
+}
+
+.clip-url-form > label,
+.clip-boundary > label {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.clip-url-row,
+.clip-boundary-control {
+  display: flex;
+  gap: 10px;
+}
+
+.clip-url-row input,
+.clip-boundary-control input {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  color: var(--text);
+  background: #fff;
+  font: inherit;
+}
+
+.clip-privacy-note,
+.clip-loop-status {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.clip-privacy-note {
+  margin: 10px 0 4px;
+}
+
+.clip-loop-status {
+  min-height: 1.4em;
+  margin-bottom: 0;
+}
+
+.clip-fallback-link {
+  width: fit-content;
+  color: var(--primary-dark);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.clip-fallback-link[hidden] {
+  display: none;
+}
+
+.clip-workspace[hidden] {
+  display: none;
+}
+
+.clip-workspace {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.clip-player-frame {
+  width: 100%;
+  min-height: 200px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #101820;
+}
+
+#youtubePlayer,
+#youtubePlayer iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.clip-position {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--muted);
+}
+
+.clip-position strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.clip-time-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.clip-boundaries {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.clip-boundary-control .secondary-btn {
+  flex-shrink: 0;
+}
+
+.clip-workspace > .primary-btn {
+  justify-self: start;
+}
+
+.clip-loop-panel button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .empty-state {
   grid-column: 1 / -1;
   padding: 26px;
@@ -1413,6 +1544,21 @@ input[type="range"] {
 
   .composer-actions {
     justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .clip-url-row,
+  .clip-boundary-control {
+    flex-direction: column;
+  }
+
+  .clip-boundaries {
+    grid-template-columns: 1fr;
+  }
+
+  .clip-workspace > .primary-btn {
+    width: 100%;
   }
 }
 
