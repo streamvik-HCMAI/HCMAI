@@ -51,7 +51,12 @@
         <p id="compositionDatasetStatus" class="raag-status" role="status" aria-live="polite">Checking administrator access...</p>
       </section>
 
-      <section id="compositionLab" class="composition-lab" hidden>
+      <div class="dataset-tabs" role="tablist" aria-label="Data views">
+        <button id="compositionTab" class="secondary-btn small is-active" type="button" role="tab" aria-selected="true" aria-controls="compositionLab">Composition datasets</button>
+        <button id="sourceRecordsTab" class="secondary-btn small" type="button" role="tab" aria-selected="false" aria-controls="sourceRecordsLab">Raw source records</button>
+      </div>
+
+      <section id="compositionLab" class="composition-lab" role="tabpanel" aria-labelledby="compositionTab" hidden>
         <aside class="dataset-sidebar">
           <label class="dataset-select-wrap" for="compositionDatasetSelect">
             <span>Dataset</span>
@@ -84,6 +89,39 @@
           <pre id="compositionRecordDetail" class="dataset-record-detail">Select a row to inspect its fields.</pre>
         </section>
       </section>
+
+      <section id="sourceRecordsLab" class="composition-lab" role="tabpanel" aria-labelledby="sourceRecordsTab" hidden>
+        <aside class="dataset-sidebar">
+          <label class="dataset-select-wrap" for="sourceRecordFilter">
+            <span>Source</span>
+            <select id="sourceRecordFilter">
+              <option value="all">All sources</option>
+              <option value="naadaalay">Naadaalay</option>
+              <option value="dunya">CompMusic Dunya</option>
+              <option value="wikipedia">Wikipedia</option>
+              <option value="wikidata">Wikidata</option>
+            </select>
+          </label>
+          <p id="sourceRecordScope" class="dataset-row-count">6,385 source records</p>
+        </aside>
+        <section class="dataset-analysis" aria-labelledby="sourceRecordHeading">
+          <h2 id="sourceRecordHeading">Raw source records</h2>
+          <p id="sourceRecordCount" class="dataset-row-count"></p>
+          <div class="dataset-table-wrap">
+            <table id="sourceRecordsTable" class="dataset-table">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="dataset-pagination">
+            <button id="sourcePreviousPage" class="secondary-btn small" type="button">Previous</button>
+            <span id="sourcePageLabel"></span>
+            <button id="sourceNextPage" class="secondary-btn small" type="button">Next</button>
+          </div>
+          <h3>Selected source record</h3>
+          <pre id="sourceRecordDetail" class="dataset-record-detail">Select a row to inspect its source fields.</pre>
+        </section>
+      </section>
     </main>
 
     <footer class="site-footer">
@@ -92,6 +130,6 @@
     </footer>
     <script src="js/main.js"></script>
     <script type="module" src="js/auth.js"></script>
-    <script type="module" src="js/data-lab.js?v=20261004-v1"></script>
+    <script type="module" src="js/data-lab.js?v=20261004-v2"></script>
   </body>
 </html>

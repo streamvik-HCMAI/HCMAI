@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, getFirestore, setDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
+import { collection, doc, documentId, getCountFromServer, getDocs, getFirestore, limit, orderBy, query, setDoc, startAfter, where, writeBatch } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import { auth } from './auth.js';
 
@@ -19,12 +19,37 @@ const pageLabel = document.getElementById('compositionPageLabel');
 const detail = document.getElementById('compositionRecordDetail');
 const previousButton = document.getElementById('compositionPreviousPage');
 const nextButton = document.getElementById('compositionNextPage');
+const compositionLab = document.getElementById('compositionLab');
+const sourceRecordsLab = document.getElementById('sourceRecordsLab');
+const compositionTab = document.getElementById('compositionTab');
+const sourceRecordsTab = document.getElementById('sourceRecordsTab');
+const sourceFilter = document.getElementById('sourceRecordFilter');
+const sourceScope = document.getElementById('sourceRecordScope');
+const sourceTable = document.getElementById('sourceRecordsTable');
+const sourceRecordCount = document.getElementById('sourceRecordCount');
+const sourcePreviousButton = document.getElementById('sourcePreviousPage');
+const sourceNextButton = document.getElementById('sourceNextPage');
+const sourcePageLabel = document.getElementById('sourcePageLabel');
+const sourceDetail = document.getElementById('sourceRecordDetail');
 
 let manifests = [];
 let records = [];
 let filteredRecords = [];
 let currentManifest = null;
 let currentPage = 0;
+const sourcePageSize = 50;
+let sourcePage = 0;
+let sourcePageCursors = [null];
+let sourcePageDocuments = [];
+let sourceTotal = 0;
+
+const sourcePrefixes = {
+  all: '',
+  naadaalay: 'naadaalay-',
+  dunya: 'dunya-',
+  wikipedia: 'wikipedia-',
+  wikidata: 'wikidata-'
+};
 
 function setStatus(message) {
   status.textContent = message;
@@ -197,6 +222,91 @@ async function loadManifests(preferredId = '') {
   await loadDataset(datasetSelect.value);
 }
 
+function renderSourceRows() {
+  const head = sourceTable.querySelector('thead');
+  const body = sourceTable.querySelector('tbody');
+  head.replaceChildren();
+  body.replaceChildren();
+  const columns = ['sourceName', 'catalogType', 'displayName', 'license', 'sourceRecordId'];
+  const headerRow = document.createElement('tr');
+  columns.forEach((column) => {
+    const cell = document.createElement('th');
+    cell.textContent = column;
+    headerRow.appendChild(cell);
+  });
+  head.appendChild(headerRow);
+
+  sourcePageDocuments.forEach((recordDocument) => {
+    const record = recordDocument.data();
+    const row = document.createElement('tr');
+    row.tabIndex = 0;
+    row.setAttribute('aria-selected', 'false');
+    columns.forEach((column) => {
+      const cell = document.createElement('td');
+      cell.textContent = formatValue(record[column]);
+      row.appendChild(cell);
+    });
+    const selectRow = () => {
+      body.querySelectorAll('tr').forEach((otherRow) => otherRow.setAttribute('aria-selected', 'false'));
+      row.setAttribute('aria-selected', 'true');
+      sourceDetail.textContent = JSON.stringify({ id: recordDocument.id, ...record }, null, 2);
+    };
+    row.addEventListener('click', selectRow);
+    row.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        selectRow();
+      }
+    });
+    body.appendChild(row);
+  });
+
+  const firstRecord = sourcePage * sourcePageSize + (sourcePageDocuments.length ? 1 : 0);
+  const lastRecord = sourcePage * sourcePageSize + sourcePageDocuments.length;
+  sourceRecordCount.textContent = `Showing ${firstRecord}-${lastRecord} of ${sourceTotal} source records.`;
+  sourcePageLabel.textContent = `Page ${sourcePage + 1} of ${Math.max(1, Math.ceil(sourceTotal / sourcePageSize))}`;
+  sourcePreviousButton.disabled = sourcePage === 0;
+  sourceNextButton.disabled = lastRecord >= sourceTotal || sourcePageDocuments.length < sourcePageSize;
+}
+
+async function loadSourcePage({ reset = false } = {}) {
+  if (reset) {
+    sourcePage = 0;
+    sourcePageCursors = [null];
+  }
+  setStatus('Loading raw source records...');
+  const prefix = sourcePrefixes[sourceFilter.value] || '';
+  const filters = prefix
+    ? [where(documentId(), '>=', prefix), where(documentId(), '<', `${prefix}\uf8ff`)]
+    : [];
+  const sourceCollection = collection(db, 'raagSourceRecords');
+  const countSnapshot = await getCountFromServer(query(sourceCollection, ...filters));
+  sourceTotal = countSnapshot.data().count;
+  const pageConstraints = [...filters, orderBy(documentId()), limit(sourcePageSize)];
+  if (sourcePageCursors[sourcePage]) pageConstraints.push(startAfter(sourcePageCursors[sourcePage]));
+  const pageSnapshot = await getDocs(query(sourceCollection, ...pageConstraints));
+  sourcePageDocuments = pageSnapshot.docs;
+  if (sourcePageDocuments.length === sourcePageSize) {
+    sourcePageCursors[sourcePage + 1] = sourcePageDocuments[sourcePageDocuments.length - 1];
+  }
+  sourceDetail.textContent = 'Select a row to inspect its source fields.';
+  const sourceNames = sourceFilter.options[sourceFilter.selectedIndex].textContent;
+  sourceScope.textContent = sourceFilter.value === 'all' ? `${sourceTotal.toLocaleString()} total records` : `${sourceTotal.toLocaleString()} ${sourceNames} records`;
+  renderSourceRows();
+  setStatus(`Loaded ${sourcePageDocuments.length} source records from ${sourceNames}.`);
+}
+
+function showDataTab(tab) {
+  const showSources = tab === 'sources';
+  compositionLab.hidden = showSources;
+  sourceRecordsLab.hidden = !showSources;
+  compositionTab.classList.toggle('is-active', !showSources);
+  sourceRecordsTab.classList.toggle('is-active', showSources);
+  compositionTab.setAttribute('aria-selected', String(!showSources));
+  sourceRecordsTab.setAttribute('aria-selected', String(showSources));
+  if (showSources) loadSourcePage({ reset: true }).catch((error) => setStatus(error.message || 'Source records could not be loaded.'));
+}
+
 async function importBundle(file) {
   const bundle = JSON.parse(await file.text());
   const manifest = bundle.manifest;
@@ -246,6 +356,18 @@ async function initialize(user) {
 }
 
 datasetSelect.addEventListener('change', () => loadDataset(datasetSelect.value).catch((error) => setStatus(error.message)));
+compositionTab.addEventListener('click', () => showDataTab('compositions'));
+sourceRecordsTab.addEventListener('click', () => showDataTab('sources'));
+sourceFilter.addEventListener('change', () => loadSourcePage({ reset: true }).catch((error) => setStatus(error.message || 'Source filter failed.')));
+sourcePreviousButton.addEventListener('click', () => {
+  sourcePage = Math.max(0, sourcePage - 1);
+  loadSourcePage().catch((error) => setStatus(error.message || 'Previous source page could not be loaded.'));
+});
+sourceNextButton.addEventListener('click', () => {
+  if (!sourcePageCursors[sourcePage + 1]) return;
+  sourcePage += 1;
+  loadSourcePage().catch((error) => setStatus(error.message || 'Next source page could not be loaded.'));
+});
 searchInput.addEventListener('input', applySearch);
 previousButton.addEventListener('click', () => { currentPage = Math.max(0, currentPage - 1); renderRows(); });
 nextButton.addEventListener('click', () => { currentPage += 1; renderRows(); });

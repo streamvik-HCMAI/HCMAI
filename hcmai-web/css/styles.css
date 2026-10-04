@@ -610,6 +610,19 @@ h1, h2, h3, h4, p {
   margin-top: 20px;
 }
 
+.dataset-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.dataset-tabs .is-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
 .dataset-sidebar {
   display: grid;
   align-content: start;
