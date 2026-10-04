@@ -122,14 +122,20 @@
               <button id="loadClipVideo" class="primary-btn" type="submit">Load video</button>
             </div>
           </form>
-          <p class="clip-privacy-note">The video plays in YouTube's embedded player. YouTube may receive playback data.</p>
+          <div class="clip-audio-upload">
+            <label for="clipAudioFile">Or choose an audio file</label>
+            <input id="clipAudioFile" type="file" accept="audio/*" />
+            <p id="clipAudioFileName" class="clip-audio-file-name" aria-live="polite"></p>
+          </div>
+          <p class="clip-privacy-note">Audio files stay on this device. YouTube videos play in YouTube's embedded player.</p>
           <p id="clipLoopStatus" class="clip-loop-status" role="status" aria-live="polite"></p>
           <a id="openClipVideoLink" class="clip-fallback-link" target="_blank" rel="noopener noreferrer" hidden>Open video on YouTube</a>
 
           <div id="clipWorkspace" class="clip-workspace" hidden>
-            <div class="clip-player-frame">
+            <div id="clipYoutubeFrame" class="clip-player-frame">
               <div id="youtubePlayer"></div>
             </div>
+            <audio id="clipLocalAudio" class="clip-local-audio" controls preload="metadata" hidden></audio>
             <div class="clip-position">
               <span>Current position</span>
               <strong id="clipCurrentTime">0:00</strong>

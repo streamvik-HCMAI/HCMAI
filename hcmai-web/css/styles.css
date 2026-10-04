@@ -831,12 +831,14 @@ input[type="range"] {
 }
 
 .clip-url-form,
+.clip-audio-upload,
 .clip-boundary {
   display: grid;
   gap: 8px;
 }
 
 .clip-url-form > label,
+.clip-audio-upload > label,
 .clip-boundary > label {
   color: var(--muted);
   font-weight: 600;
@@ -849,6 +851,7 @@ input[type="range"] {
 }
 
 .clip-url-row input,
+.clip-audio-upload input,
 .clip-boundary-control input {
   width: 100%;
   min-width: 0;
@@ -862,6 +865,7 @@ input[type="range"] {
 }
 
 .clip-privacy-note,
+.clip-audio-file-name,
 .clip-loop-status {
   color: var(--muted);
   font-size: 0.86rem;
@@ -870,6 +874,11 @@ input[type="range"] {
 
 .clip-privacy-note {
   margin: 10px 0 4px;
+}
+
+.clip-audio-file-name {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .clip-loop-status {
@@ -905,6 +914,17 @@ input[type="range"] {
   overflow: hidden;
   border-radius: 8px;
   background: #101820;
+}
+
+.clip-player-frame[hidden],
+.clip-local-audio[hidden] {
+  display: none;
+}
+
+.clip-local-audio {
+  display: block;
+  width: 100%;
+  min-height: 48px;
 }
 
 #youtubePlayer,

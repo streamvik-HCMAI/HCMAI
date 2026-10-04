@@ -66,7 +66,11 @@ if (playToggle && playIcon && selectedScaleLabel && scaleButtons.length) {
 const clipVideoForm = document.getElementById('clipVideoForm');
 const clipVideoUrl = document.getElementById('youtubeVideoUrl');
 const clipLoadButton = document.getElementById('loadClipVideo');
+const clipAudioFile = document.getElementById('clipAudioFile');
+const clipAudioFileName = document.getElementById('clipAudioFileName');
 const clipWorkspace = document.getElementById('clipWorkspace');
+const clipYoutubeFrame = document.getElementById('clipYoutubeFrame');
+const clipLocalAudio = document.getElementById('clipLocalAudio');
 const clipStatus = document.getElementById('clipLoopStatus');
 const clipFallbackLink = document.getElementById('openClipVideoLink');
 const clipDurationHint = document.getElementById('clipDurationHint');
@@ -78,7 +82,8 @@ const clipCurrentTime = document.getElementById('clipCurrentTime');
 const clipLoopToggle = document.getElementById('clipLoopToggle');
 
 if (
-  clipVideoForm && clipVideoUrl && clipLoadButton && clipWorkspace && clipStatus && clipFallbackLink && clipDurationHint &&
+  clipVideoForm && clipVideoUrl && clipLoadButton && clipAudioFile && clipAudioFileName && clipWorkspace && clipYoutubeFrame && clipLocalAudio &&
+  clipStatus && clipFallbackLink && clipDurationHint &&
   clipStartTime && clipEndTime && markClipStart && markClipEnd && clipCurrentTime && clipLoopToggle
 ) {
   let youtubePlayer = null;
@@ -87,6 +92,9 @@ if (
   let loopingClip = false;
   let loopSeekAvailableAt = 0;
   let currentVideoId = '';
+  let activeClipSource = '';
+  let localClipObjectUrl = null;
+  let clipClockInterval = null;
 
   const setClipStatus = (message) => {
     clipStatus.textContent = message;
@@ -138,22 +146,98 @@ if (
     return minutes * 60 + seconds;
   };
 
-  const updateClipDurationHint = () => {
-    const duration = Math.floor(youtubePlayer.getDuration());
-    if (!Number.isFinite(duration) || duration <= 0) {
-      clipDurationHint.textContent = 'Waiting for YouTube to report the video duration.';
+  const getClipDuration = () => activeClipSource === 'audio'
+    ? clipLocalAudio.duration
+    : youtubePlayer?.getDuration() || 0;
+
+  const getClipCurrentTime = () => activeClipSource === 'audio'
+    ? clipLocalAudio.currentTime
+    : youtubePlayer?.getCurrentTime() || 0;
+
+  const isClipPlaying = () => activeClipSource === 'audio'
+    ? !clipLocalAudio.paused && !clipLocalAudio.ended
+    : youtubePlayer?.getPlayerState() === window.YT?.PlayerState.PLAYING;
+
+  const seekClip = (seconds) => {
+    if (activeClipSource === 'audio') clipLocalAudio.currentTime = seconds;
+    else if (activeClipSource === 'youtube' && playerIsReady) youtubePlayer.seekTo(seconds, true);
+  };
+
+  const releaseLocalClip = () => {
+    clipLocalAudio.pause();
+    clipLocalAudio.removeAttribute('src');
+    clipLocalAudio.load();
+    if (localClipObjectUrl) URL.revokeObjectURL(localClipObjectUrl);
+    localClipObjectUrl = null;
+  };
+
+  const stopClipPlayback = () => {
+    loopingClip = false;
+    if (activeClipSource === 'audio') clipLocalAudio.pause();
+    if (activeClipSource === 'youtube' && playerIsReady) youtubePlayer.pauseVideo();
+    clipLoopToggle.textContent = 'Play clip loop';
+  };
+
+  const handleClipEnded = () => {
+    if (!loopingClip) return;
+    const bounds = readClipBounds();
+    if (!bounds) {
+      stopClipPlayback();
+      setClipStatus('Clip loop stopped. Check the start and end timestamps.');
       return;
     }
 
-    clipDurationHint.textContent = `Video duration: ${formatClipTime(duration)}. End time cannot exceed this.`;
+    loopSeekAvailableAt = performance.now() + 200;
+    seekClip(bounds.start);
+    if (activeClipSource === 'audio') {
+      clipLocalAudio.play().catch(() => {
+        stopClipPlayback();
+        setClipStatus('This audio file could not be played by the browser.');
+      });
+    } else {
+      youtubePlayer.playVideo();
+    }
+  };
+
+  const updateClipDurationHint = () => {
+    const duration = Math.floor(getClipDuration());
+    if (!Number.isFinite(duration) || duration <= 0) {
+      clipDurationHint.textContent = 'Waiting for the media duration.';
+      return;
+    }
+
+    const mediaLabel = activeClipSource === 'audio' ? 'Audio duration' : 'Video duration';
+    clipDurationHint.textContent = `${mediaLabel}: ${formatClipTime(duration)}. End time cannot exceed this.`;
     const end = parseClipTime(clipEndTime.value);
     if (end !== null && end > duration) clipEndTime.value = formatClipTime(duration);
+  };
+
+  const startClipClock = () => {
+    if (clipClockInterval) return;
+    clipClockInterval = window.setInterval(() => {
+      if (!activeClipSource) return;
+      const currentTime = getClipCurrentTime();
+      if (Number.isFinite(currentTime)) clipCurrentTime.textContent = formatClipTime(currentTime);
+      if (!loopingClip || !isClipPlaying()) return;
+
+      const bounds = readClipBounds();
+      if (!bounds) {
+        stopClipPlayback();
+        setClipStatus('Clip loop stopped. Check the start and end timestamps.');
+        return;
+      }
+
+      if (currentTime >= bounds.end && performance.now() >= loopSeekAvailableAt) {
+        loopSeekAvailableAt = performance.now() + 200;
+        seekClip(bounds.start);
+      }
+    }, 100);
   };
 
   const readClipBounds = () => {
     const start = parseClipTime(clipStartTime.value);
     const end = parseClipTime(clipEndTime.value);
-    const duration = youtubePlayer?.getDuration() || 0;
+    const duration = getClipDuration() || 0;
 
     if (start === null || end === null || start < 0 || end <= start || duration <= 0) {
       return null;
@@ -199,33 +283,20 @@ if (
         onReady: () => {
           playerIsReady = true;
           enableClipControls();
-          updateClipDurationHint();
-          setClipStatus('Video ready. Set the clip boundaries, then play the loop.');
+          if (activeClipSource === 'youtube') {
+            updateClipDurationHint();
+            setClipStatus('Video ready. Set the clip boundaries, then play the loop.');
+          }
 
-          window.setInterval(() => {
-            if (!playerIsReady) return;
-            const currentTime = youtubePlayer.getCurrentTime();
-            if (Number.isFinite(currentTime)) {
-              clipCurrentTime.textContent = formatClipTime(currentTime);
-            }
-
-            if (!loopingClip || youtubePlayer.getPlayerState() !== YT.PlayerState.PLAYING) return;
-            const bounds = readClipBounds();
-            if (!bounds) {
-              loopingClip = false;
-              clipLoopToggle.textContent = 'Play clip loop';
-              setClipStatus('Clip loop stopped. Check the start and end timestamps.');
-              return;
-            }
-
-            if (currentTime >= bounds.end && performance.now() >= loopSeekAvailableAt) {
-              loopSeekAvailableAt = performance.now() + 350;
-              youtubePlayer.seekTo(bounds.start, true);
-            }
-          }, 100);
+          startClipClock();
         },
         onStateChange: (event) => {
-          if (event.data === YT.PlayerState.CUED) updateClipDurationHint();
+          if (activeClipSource !== 'youtube') return;
+          if (event.data === YT.PlayerState.CUED) {
+            enableClipControls();
+            updateClipDurationHint();
+            setClipStatus('Video ready. Set the clip boundaries, then play the loop.');
+          }
           if (event.data === YT.PlayerState.PLAYING) {
             updateClipDurationHint();
             setClipStatus(loopingClip ? 'Playing the selected clip on loop.' : 'YouTube video is playing.');
@@ -236,16 +307,7 @@ if (
             setClipStatus('Clip loop paused.');
           }
           if (event.data === YT.PlayerState.ENDED && loopingClip) {
-            const bounds = readClipBounds();
-            if (bounds) {
-              loopSeekAvailableAt = performance.now() + 350;
-              youtubePlayer.seekTo(bounds.start, true);
-              youtubePlayer.playVideo();
-            } else {
-              loopingClip = false;
-              clipLoopToggle.textContent = 'Play clip loop';
-              setClipStatus('Clip loop stopped. Check the start and end timestamps.');
-            }
+            handleClipEnded(YT);
           }
         },
         onError: (event) => {
@@ -267,6 +329,68 @@ if (
     });
   };
 
+  clipLocalAudio.addEventListener('loadedmetadata', () => {
+    if (activeClipSource !== 'audio') return;
+    const duration = Math.floor(clipLocalAudio.duration);
+    clipStartTime.value = '0:00';
+    clipEndTime.value = formatClipTime(Math.min(10, Math.max(1, duration)));
+    enableClipControls();
+    updateClipDurationHint();
+    startClipClock();
+    setClipStatus('Audio ready. Set the clip boundaries, then play the loop.');
+  });
+
+  clipLocalAudio.addEventListener('play', () => {
+    if (activeClipSource === 'audio') {
+      setClipStatus(loopingClip ? 'Playing the selected clip on loop.' : 'Audio is playing.');
+    }
+  });
+
+  clipLocalAudio.addEventListener('pause', () => {
+    if (activeClipSource === 'audio' && loopingClip) {
+      loopingClip = false;
+      clipLoopToggle.textContent = 'Play clip loop';
+      setClipStatus('Clip loop paused.');
+    }
+  });
+
+  clipLocalAudio.addEventListener('ended', handleClipEnded);
+
+  clipLocalAudio.addEventListener('error', () => {
+    if (activeClipSource !== 'audio') return;
+    stopClipPlayback();
+    setClipStatus('This audio file could not be played. Try MP3, WAV, M4A, or OGG.');
+  });
+
+  clipAudioFile.addEventListener('change', () => {
+    const file = clipAudioFile.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('audio/') && !/\.(mp3|wav|m4a|ogg|opus|aac|flac)$/i.test(file.name)) {
+      setClipStatus('Choose a supported audio file.');
+      clipAudioFileName.textContent = '';
+      clipAudioFile.value = '';
+      return;
+    }
+
+    stopClipPlayback();
+    activeClipSource = '';
+    releaseLocalClip();
+    activeClipSource = 'audio';
+    clipYoutubeFrame.hidden = true;
+    clipLocalAudio.hidden = false;
+    clipWorkspace.hidden = false;
+    clipFallbackLink.hidden = true;
+    clipAudioFileName.textContent = file.name;
+    setClipStatus('Loading audio file...');
+    localClipObjectUrl = URL.createObjectURL(file);
+    clipLocalAudio.src = localClipObjectUrl;
+    clipAudioFile.value = '';
+  });
+
+  window.addEventListener('pagehide', () => {
+    if (localClipObjectUrl) URL.revokeObjectURL(localClipObjectUrl);
+  });
+
   clipVideoForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     clipFallbackLink.hidden = true;
@@ -277,9 +401,16 @@ if (
     }
 
     currentVideoId = videoId;
-    loopingClip = false;
-    clipLoopToggle.textContent = 'Play clip loop';
+    stopClipPlayback();
+    activeClipSource = '';
+    releaseLocalClip();
+    activeClipSource = 'youtube';
+    clipYoutubeFrame.hidden = false;
+    clipLocalAudio.hidden = true;
+    clipAudioFileName.textContent = '';
     clipWorkspace.hidden = false;
+    clipStartTime.value = '0:00';
+    clipEndTime.value = '0:10';
     clipLoadButton.disabled = true;
     setClipStatus('Loading YouTube player...');
 
@@ -296,20 +427,18 @@ if (
   });
 
   markClipStart.addEventListener('click', () => {
-    clipStartTime.value = formatClipTime(youtubePlayer.getCurrentTime());
+    clipStartTime.value = formatClipTime(getClipCurrentTime());
     setClipStatus('Clip start set to the current position.');
   });
 
   markClipEnd.addEventListener('click', () => {
-    clipEndTime.value = formatClipTime(youtubePlayer.getCurrentTime());
+    clipEndTime.value = formatClipTime(getClipCurrentTime());
     setClipStatus('Clip end set to the current position.');
   });
 
   clipLoopToggle.addEventListener('click', () => {
     if (loopingClip) {
-      loopingClip = false;
-      youtubePlayer.pauseVideo();
-      clipLoopToggle.textContent = 'Play clip loop';
+      stopClipPlayback();
       setClipStatus('Clip loop paused.');
       return;
     }
@@ -324,8 +453,15 @@ if (
     loopSeekAvailableAt = performance.now() + 350;
     clipLoopToggle.textContent = 'Pause clip loop';
     setClipStatus('Starting clip loop...');
-    youtubePlayer.seekTo(bounds.start, true);
-    youtubePlayer.playVideo();
+    seekClip(bounds.start);
+    if (activeClipSource === 'audio') {
+      clipLocalAudio.play().catch(() => {
+        stopClipPlayback();
+        setClipStatus('This audio file could not be played by the browser.');
+      });
+    } else {
+      youtubePlayer.playVideo();
+    }
   });
 }
 
