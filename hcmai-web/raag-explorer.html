@@ -51,28 +51,56 @@
           </div>
           <div class="inline-actions">
             <button class="secondary-btn small admin-only" type="button" data-admin-only>+ Add Raag</button>
-            <button class="secondary-btn small">Saved raags</button>
+            <button id="importRaagsButton" class="secondary-btn small admin-only" type="button" data-admin-only>Import JSON</button>
+            <button id="exportRaagsButton" class="secondary-btn small admin-only" type="button" data-admin-only>Export JSON</button>
+            <button id="importRaagSourcesButton" class="secondary-btn small admin-only" type="button" data-admin-only>Import source data</button>
+            <button id="exportRaagSourcesButton" class="secondary-btn small admin-only" type="button" data-admin-only>Export source data</button>
+            <a class="secondary-btn small admin-only" href="data-lab.html" data-admin-only>Composition Data Lab</a>
+            <input id="importRaagsFile" type="file" accept="application/json,.json" hidden />
+            <input id="importRaagSourcesFile" type="file" accept="application/json,.json" hidden />
           </div>
         </div>
 
         <div class="toolbar-block">
           <label class="search-box">
-            <span>Search</span>
-            <input id="raagSearch" type="search" placeholder="Search raags, mood, or thaat" />
+            <span>Search Raags</span>
+            <input id="raagSearch" type="search" placeholder="Name, alias, swara, thaat, or Pakad" />
           </label>
 
-          <div class="filter-row">
-            <button class="filter-pill active">All</button>
-            <button class="filter-pill">Morning</button>
-            <button class="filter-pill">Evening</button>
-            <button class="filter-pill">Night</button>
-            <button class="filter-pill">Popular</button>
-          </div>
+          <form id="raagFilterForm" class="raag-filter-form">
+            <label>
+              <span>Jati</span>
+              <select id="raagJatiFilter">
+                <option value="">Any</option>
+                <option value="Sampurna">Sampurna</option>
+                <option value="Shadav">Shadav</option>
+                <option value="Audav">Audav</option>
+                <option value="Vakra">Vakra</option>
+              </select>
+            </label>
+            <label>
+              <span>Thaat</span>
+              <select id="raagThaatFilter">
+                <option value="">Any</option>
+              </select>
+            </label>
+            <label>
+              <span>Time</span>
+              <select id="raagTimeFilter">
+                <option value="">Any</option>
+                <option value="Morning">Morning</option>
+                <option value="Afternoon">Afternoon</option>
+                <option value="Evening">Evening</option>
+                <option value="Night">Night</option>
+              </select>
+            </label>
+            <button class="primary-btn small" type="submit">Search Raags</button>
+          </form>
+          <p id="raagStatus" class="raag-status" role="status" aria-live="polite">Loading the live raag library...</p>
         </div>
       </section>
 
       <section class="card-grid three-up explorer-grid" id="raagGrid">
-        <p id="raagStatus" class="empty-state">Loading the live raag library...</p>
       </section>
     </main>
 
@@ -99,6 +127,6 @@
 
     <script src="js/main.js"></script>
     <script type="module" src="js/auth.js"></script>
-    <script type="module" src="js/learn.js"></script>
+    <script type="module" src="js/learn.js?v=20261004-source-import-4"></script>
   </body>
 </html>

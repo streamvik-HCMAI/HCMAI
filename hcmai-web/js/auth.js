@@ -349,9 +349,7 @@ function bindAuth() {
     button.addEventListener('click', () => {
       if (!appState.isAdmin) {
         openAuthModal('login');
-        return;
       }
-      alert('Admin add-raag flow');
     });
   });
 }

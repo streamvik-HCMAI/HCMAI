@@ -24,5 +24,17 @@ service cloud.firestore {
         allow create, update, delete: if isAdmin();
       }
     }
+
+    match /raagSourceRecords/{recordId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
+    match /compositionDatasets/{datasetId} {
+      allow read, create, update, delete: if isAdmin();
+
+      match /records/{recordId} {
+        allow read, create, update, delete: if isAdmin();
+      }
+    }
   }
 }

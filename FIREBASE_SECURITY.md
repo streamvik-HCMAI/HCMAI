@@ -4,7 +4,7 @@ The clients must not decide who is an administrator. The website and iOS app now
 
 ## Deploy rules
 
-This computer currently does not have Node.js or the Firebase CLI installed. On a computer with Node.js installed, run these commands from the repository root:
+On a trusted computer with Node.js and the Firebase CLI, run these commands from the repository root:
 
 ```powershell
 npm install -g firebase-tools
@@ -17,19 +17,19 @@ The Google account used by `firebase login` must have permission to administer t
 
 ## Grant administrator access
 
-The intended admin Firebase UID is `09JvBvWi5rebnT4honz5Q2N6Uoe2`. Run the one-time script in `tools/set-admin-claim.js` from a trusted machine. It uses Application Default Credentials and does not require a service-account file in this repository:
+Admin access is a Firebase custom claim, not a separate login account. The production admin UID is `09JvBvWi5rebnT4honz5Q2N6Uoe2`. To grant the claim in development, the verified teacher account is UID `OX7ntJciyGdTROqASx4j1WTQevq2` (`swapnilthakre@gmail.com`). Run the guarded helper from the repository root in Google Cloud Shell or another trusted environment. It checks that the UID's email matches before changing claims and uses Application Default Credentials:
 
-```js
-npm install firebase-admin
+```bash
+npm ci --prefix functions
 gcloud auth application-default login
-node tools/set-admin-claim.js
+node tools/set-admin-claim.js hcmai-dev OX7ntJciyGdTROqASx4j1WTQevq2 swapnilthakre@gmail.com
 ```
 
-The Google identity used for Application Default Credentials must have permission to manage Firebase Authentication users in project `hcmai-v3e0h9`. Never commit a service-account JSON file, private key, password, or token.
+The Google identity used for Application Default Credentials must have permission to manage Firebase Authentication users in the target project. Never commit a service-account JSON file, private key, password, or token. This workspace has no local `gcloud` or Application Default Credentials, so the grant must be run from Cloud Shell or another authorized environment.
 
 After changing claims, the user must sign out and sign in again, or refresh the ID token. To remove access, set `{ admin: false }` or revoke the user session from the trusted Admin SDK environment.
 
-The rules allow published raags to be read publicly, require authentication for protected topics and audio, and restrict all raag/topic writes and audio uploads to users with the verified `admin` claim.
+The rules allow published raags to be read publicly, require authentication for protected topics and audio, and restrict all raag/topic writes and audio uploads to users with the verified `admin` claim. Raw imported records in `raagSourceRecords` and composition datasets in `compositionDatasets` (including their `records` subcollections) are readable and writable only by admins; they are never public through Firestore rules.
 
 ## Environment-aware website
 
