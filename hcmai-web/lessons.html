@@ -52,29 +52,14 @@
         </div>
       </section>
 
-      <section id="classroomSyncPanel" class="section-surface classroom-sync-panel" hidden>
+      <section id="moodleAdminTools" class="section-surface moodle-admin-tools" hidden>
         <div>
-          <p class="eyebrow">Teacher tools</p>
-          <h2>Classroom publishing</h2>
-          <p>In Classroom, add <strong>HCMAI: Enrollment Open</strong> to list a course. Add <strong>HCMAI: Public</strong> to individual materials anyone may view. Other published materials stay roster-restricted.</p>
-          <p>In Classroom, add <strong>HCMAI: Enrollment Open</strong> to courses students may request. Add <strong>HCMAI: Public</strong> to individual materials anyone may view. Other published materials stay roster-restricted.</p>
+          <p class="eyebrow">Moodle catalog</p>
+          <h2>Course directory sync</h2>
+          <p>Courses, enrollment, lessons, and media are managed in Moodle. The catalog sync becomes available after the Moodle service is configured.</p>
         </div>
-        <button id="connectClassroomButton" class="secondary-btn" type="button">Connect Classroom</button>
-        <label class="classroom-public-confirmation">
-          <input id="confirmClassroomVisibility" type="checkbox" disabled />
-          <span>I reviewed the Classroom topics; only HCMAI: Public materials are public.</span>
-        </label>
-        <label class="classroom-public-confirmation">
-          <input id="enableClassroomAutoSync" type="checkbox" checked disabled />
-          <span>Keep the course catalog and materials synced every hour.</span>
-        </label>
-        <button id="syncClassroomButton" class="primary-btn" type="button" disabled>Sync courses and lessons</button>
-        <p id="classroomSyncStatus" class="classroom-sync-status" role="status" aria-live="polite"></p>
-        <div class="classroom-enrollment-requests">
-          <h3>Enrollment requests</h3>
-          <p>Add approved learners to the Classroom course. Roster sync will grant their website access.</p>
-          <ul id="enrollmentRequestList"></ul>
-        </div>
+        <button id="syncMoodleCatalogButton" class="secondary-btn" type="button">Sync now</button>
+        <p id="moodleSyncStatus" class="moodle-sync-status" role="status" aria-live="polite"></p>
       </section>
 
       <section class="lesson-layout">
@@ -86,7 +71,7 @@
         </aside>
 
         <div id="lessonCards" class="lesson-cards" aria-live="polite">
-          <p class="lesson-status">Loading available courses...</p>
+          <p class="lesson-status">Loading courses...</p>
         </div>
       </section>
     </main>
@@ -114,6 +99,6 @@
 
     <script src="js/main.js"></script>
     <script type="module" src="js/auth.js"></script>
-    <script type="module" src="js/classroom-lessons.js"></script>
+    <script type="module" src="js/moodle-lessons.js"></script>
   </body>
 </html>

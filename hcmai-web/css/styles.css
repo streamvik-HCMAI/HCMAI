@@ -665,6 +665,37 @@ h1, h2, h3, h4, p {
   margin-top: 22px;
 }
 
+.moodle-admin-tools {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.moodle-admin-tools[hidden] {
+  display: none;
+}
+
+.moodle-admin-tools h2 {
+  margin-bottom: 8px;
+  font-size: 1.2rem;
+}
+
+.moodle-admin-tools p {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.moodle-sync-status {
+  min-height: 1.4em;
+  font-size: 0.88rem;
+}
+
+.moodle-admin-tools button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 .lesson-sidebar {
   padding: 18px 16px;
 }
@@ -703,100 +734,11 @@ h1, h2, h3, h4, p {
   padding: 18px 16px;
 }
 
-.classroom-sync-panel {
-  display: grid;
-  gap: 14px;
-  margin-top: 20px;
-}
-
-.classroom-sync-panel[hidden] {
-  display: none;
-}
-
-.classroom-sync-panel h2 {
-  margin-bottom: 8px;
-  font-size: 1.3rem;
-}
-
-.classroom-sync-panel p {
-  margin-bottom: 0;
-  color: var(--muted);
-  line-height: 1.55;
-}
-
-.classroom-course-field {
-  display: grid;
-  gap: 8px;
-  color: var(--muted);
-  font-weight: 600;
-}
-
-.classroom-course-field select {
-  width: 100%;
-  min-height: 48px;
-  padding: 10px 12px;
-  border: 1px solid var(--stroke);
-  border-radius: 10px;
-  color: var(--text);
-  background: #fff;
-  font: inherit;
-}
-
-.classroom-public-confirmation {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  color: var(--text);
-  line-height: 1.45;
-}
-
-.classroom-public-confirmation input {
-  flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
-  margin: 1px 0 0;
-}
-
-.classroom-sync-status,
+.moodle-sync-status,
 .lesson-status {
   margin: 0;
   color: var(--muted);
   line-height: 1.55;
-}
-
-.classroom-enrollment-requests {
-  display: grid;
-  gap: 8px;
-  padding-top: 14px;
-  border-top: 1px solid var(--stroke);
-}
-
-.classroom-enrollment-requests h3,
-.classroom-enrollment-requests p {
-  margin: 0;
-}
-
-.classroom-enrollment-requests ul {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.classroom-enrollment-requests li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--stroke);
-  border-radius: 8px;
-}
-
-.classroom-sync-panel button:disabled,
-.classroom-course-field select:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
 }
 
 .lesson-topic-filter {
