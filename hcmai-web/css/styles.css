@@ -1265,6 +1265,21 @@ input[type="range"] {
   gap: 12px;
 }
 
+.google-sign-in {
+  width: 100%;
+  min-height: 48px;
+  margin: 4px 0 0;
+  background: #fff;
+  border: 1px solid var(--stroke);
+}
+
+.auth-divider {
+  margin: 0;
+  color: var(--muted-soft);
+  font-size: 0.76rem;
+  text-align: center;
+}
+
 .auth-form label {
   display: grid;
   gap: 8px;
@@ -1363,6 +1378,17 @@ input[type="range"] {
   font-size: 0.85rem;
   font-weight: 700;
   word-break: break-all;
+}
+
+.profile-menu-status {
+  margin: 0 0 8px;
+  color: #b42318;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.profile-google-link {
+  margin-bottom: 8px;
 }
 
 .profile-logout {

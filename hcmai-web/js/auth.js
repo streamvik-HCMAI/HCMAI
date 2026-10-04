@@ -3,9 +3,12 @@ import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
   getAuth,
+  GoogleAuthProvider,
+  linkWithPopup,
   onAuthStateChanged,
   sendPasswordResetEmail,
   setPersistence,
+  signInWithPopup,
   signInWithEmailAndPassword,
   signOut
 } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
@@ -13,6 +16,7 @@ import { firebaseConfig, firebaseEnvironment } from './firebase-config.js';
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
+const googleProvider = new GoogleAuthProvider();
 
 console.info(`HCMAI Firebase environment: ${firebaseEnvironment}`);
 
@@ -39,7 +43,13 @@ function getAuthErrorMessage(error) {
     'auth/invalid-email': 'Please enter a valid email address.',
     'auth/weak-password': `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
     'auth/too-many-requests': 'Too many attempts. Please try again later.',
-    'auth/network-request-failed': 'Network error. Check your connection and try again.'
+    'auth/network-request-failed': 'Network error. Check your connection and try again.',
+    'auth/account-exists-with-different-credential': 'This email already uses another sign-in method. Sign in with that method, then link Google from Profile.',
+    'auth/credential-already-in-use': 'That Google account is already connected to another HCMAI account.',
+    'auth/operation-not-allowed': 'Google sign-in is not enabled for this Firebase project yet.',
+    'auth/popup-blocked': 'Allow popups for this site and try Google sign-in again.',
+    'auth/popup-closed-by-user': 'Google sign-in was closed before it finished.',
+    'auth/unauthorized-domain': 'This site domain is not enabled for sign-in in Firebase Authentication.'
   };
 
   return messages[error.code] || 'Authentication failed. Please try again.';
@@ -109,6 +119,9 @@ function openAuthModal(mode = 'login') {
         <button class="close-auth" type="button" aria-label="Close">✕</button>
       </div>
 
+      <button class="secondary-btn google-sign-in" type="button">Continue with Google</button>
+      <p class="auth-divider">Or continue with email</p>
+
       <form class="auth-form" novalidate>
         <label>
           <span>Email</span>
@@ -152,6 +165,7 @@ function openAuthModal(mode = 'login') {
   const passwordInput = modal.querySelector('#auth-password');
   const confirmInput = modal.querySelector('#auth-confirm-password');
   const togglePasswordBtn = modal.querySelector('.toggle-password');
+  const googleButton = modal.querySelector('.google-sign-in');
 
   function showError(message) {
     errorEl.textContent = message;
@@ -173,6 +187,20 @@ function openAuthModal(mode = 'login') {
     passwordInput.type = isHidden ? 'text' : 'password';
     togglePasswordBtn.textContent = isHidden ? 'Hide' : 'Show';
     togglePasswordBtn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+  });
+
+  googleButton.addEventListener('click', async () => {
+    googleButton.disabled = true;
+    showError('');
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+      await signInWithPopup(auth, googleProvider);
+      closeModal(modal);
+    } catch (error) {
+      showError(getAuthErrorMessage(error));
+    } finally {
+      googleButton.disabled = false;
+    }
   });
 
   modal.querySelector('.auth-toggle').addEventListener('click', () => {
@@ -246,13 +274,33 @@ function openProfileMenu(anchorButton) {
   menu.id = 'profile-menu';
   menu.className = 'profile-menu';
   const email = auth.currentUser?.email || 'Signed in';
+  const hasGoogleProvider = auth.currentUser?.providerData.some((provider) => provider.providerId === 'google.com');
 
   menu.innerHTML = `
     <p class="profile-menu-email">${appState.isAdmin ? 'Admin account' : 'Signed in as'}</p>
     <p class="profile-menu-email-value"></p>
+    <p class="profile-menu-status" role="status" hidden></p>
+    ${hasGoogleProvider ? '' : '<button type="button" class="text-link profile-google-link">Link Google account</button>'}
     <button type="button" class="text-link profile-logout">Log out</button>
   `;
   menu.querySelector('.profile-menu-email-value').textContent = email;
+
+  menu.querySelector('.profile-google-link')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    const status = menu.querySelector('.profile-menu-status');
+    button.disabled = true;
+    button.textContent = 'Connecting...';
+    status.hidden = true;
+    try {
+      await linkWithPopup(auth.currentUser, googleProvider);
+      closeProfileMenu();
+    } catch (error) {
+      status.textContent = getAuthErrorMessage(error);
+      status.hidden = false;
+      button.disabled = false;
+      button.textContent = 'Link Google account';
+    }
+  });
 
   document.body.appendChild(menu);
 
