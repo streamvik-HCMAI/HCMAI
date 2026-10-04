@@ -703,6 +703,153 @@ h1, h2, h3, h4, p {
   padding: 18px 16px;
 }
 
+.classroom-sync-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.classroom-sync-panel[hidden] {
+  display: none;
+}
+
+.classroom-sync-panel h2 {
+  margin-bottom: 8px;
+  font-size: 1.3rem;
+}
+
+.classroom-sync-panel p {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.classroom-course-field {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.classroom-course-field select {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  color: var(--text);
+  background: #fff;
+  font: inherit;
+}
+
+.classroom-public-confirmation {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.classroom-public-confirmation input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+}
+
+.classroom-sync-status,
+.lesson-status {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.classroom-enrollment-requests {
+  display: grid;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--stroke);
+}
+
+.classroom-enrollment-requests h3,
+.classroom-enrollment-requests p {
+  margin: 0;
+}
+
+.classroom-enrollment-requests ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.classroom-enrollment-requests li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+}
+
+.classroom-sync-panel button:disabled,
+.classroom-course-field select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.lesson-topic-filter {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lesson-card h3 {
+  font-size: 1.25rem;
+  letter-spacing: 0;
+}
+
+.lesson-material-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.lesson-material-links a {
+  overflow-wrap: anywhere;
+}
+
+.lesson-media-frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  margin-top: 14px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px;
+  background: #101820;
+}
+
+.lesson-media-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.lesson-request-status {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
 .lesson-top {
   display: flex;
   justify-content: space-between;

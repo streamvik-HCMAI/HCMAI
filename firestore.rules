@@ -10,6 +10,73 @@ service cloud.firestore {
       return signedIn() && request.auth.token.admin == true;
     }
 
+    function isTeacher() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == 'swapnilthakre@gmail.com';
+    }
+
+    function isClassroomMember(courseId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/classroomMemberships/$(request.auth.uid + '_' + courseId));
+    }
+
+    match /courseCatalog/{courseId} {
+      allow get: if resource.data.listedOnWebsite == true || isTeacher() || isClassroomMember(courseId);
+      allow list: if resource.data.listedOnWebsite == true || isTeacher();
+      allow create, update, delete: if isTeacher();
+    }
+
+    match /courseMaterials/{materialId} {
+      allow read: if resource.data.accessLevel == 'public'
+        || isTeacher()
+        || isClassroomMember(resource.data.courseId);
+      allow create, update, delete: if isTeacher();
+    }
+
+    match /classroomMemberships/{membershipId} {
+      allow get: if isTeacher()
+        || (signedIn() && membershipId.matches('^' + request.auth.uid + '_.*$'));
+      allow list: if isTeacher()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /enrollmentRequests/{requestId} {
+      allow create: if signedIn()
+        && request.auth.token.email_verified == true
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.userEmail == request.auth.token.email
+        && request.resource.data.status == 'pending'
+        && request.resource.data.courseId is string
+        && request.resource.data.courseName == get(/databases/$(database)/documents/courseCatalog/$(request.resource.data.courseId)).data.courseName
+        && requestId == request.auth.uid + '_' + request.resource.data.courseId
+        && request.resource.data.keys().hasOnly([
+          'userId', 'userEmail', 'courseId', 'courseName', 'status', 'requestedAt'
+        ])
+        && get(/databases/$(database)/documents/courseCatalog/$(request.resource.data.courseId)).data.enrollmentOpen == true;
+      allow get: if isTeacher()
+        || (signedIn() && requestId.matches('^' + request.auth.uid + '_.*$'));
+      allow list: if isTeacher()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isTeacher();
+    }
+
+    match /classroomSyncConfig/{configId} {
+      allow read, delete: if isTeacher() && configId == 'enrollmentCatalog';
+      allow create, update: if isTeacher()
+        && configId == 'enrollmentCatalog'
+        && request.resource.data.keys().hasOnly([
+          'teacherEmail', 'enabled', 'updatedAt'
+        ])
+        && request.resource.data.teacherEmail == request.auth.token.email
+        && request.resource.data.enabled is bool;
+    }
+
+    match /publicLessons/{lessonId} {
+      allow read, write: if false;
+    }
+
     match /raags/{raagId} {
       allow read: if resource.data.isPublished == true || isAdmin();
       allow create, update, delete: if isAdmin();

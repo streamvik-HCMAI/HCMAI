@@ -16,12 +16,12 @@
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
       rel="stylesheet"
-    />
+          <p>In Classroom, add <strong>HCMAI: Enrollment Open</strong> to list a course. Add <strong>HCMAI: Public</strong> to individual materials anyone may view. Other published materials stay roster-restricted.</p>
     <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body data-page="lessons">
     <header class="topbar">
-      <div class="brand-wrap">
+          <span>I reviewed the Classroom topics; only HCMAI: Public materials are public.</span>
         <div class="brand-mark">H</div>
         <div class="brand-copy">
           <span class="brand-name">HCMAI</span>
@@ -46,65 +46,46 @@
       <section class="section-surface hero-inline">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Your path</p>
+            <p class="eyebrow">Study and practice</p>
             <h1>Lessons</h1>
           </div>
-          <button class="secondary-btn small">Continue</button>
+        </div>
+      </section>
+
+      <section id="classroomSyncPanel" class="section-surface classroom-sync-panel" hidden>
+        <div>
+          <p class="eyebrow">Teacher tools</p>
+          <h2>Classroom publishing</h2>
+          <p>In Classroom, add <strong>HCMAI: Enrollment Open</strong> to courses students may request. Add <strong>HCMAI: Public</strong> to individual materials anyone may view. Other published materials stay roster-restricted.</p>
+        </div>
+        <button id="connectClassroomButton" class="secondary-btn" type="button">Connect Classroom</button>
+        <label class="classroom-public-confirmation">
+          <input id="confirmClassroomVisibility" type="checkbox" disabled />
+          <span>I reviewed the Classroom topics and understand their website visibility.</span>
+        </label>
+        <label class="classroom-public-confirmation">
+          <input id="enableClassroomAutoSync" type="checkbox" checked disabled />
+          <span>Keep the course catalog and materials synced every hour.</span>
+        </label>
+        <button id="syncClassroomButton" class="primary-btn" type="button" disabled>Sync courses and lessons</button>
+        <p id="classroomSyncStatus" class="classroom-sync-status" role="status" aria-live="polite"></p>
+        <div class="classroom-enrollment-requests">
+          <h3>Enrollment requests</h3>
+          <p>Add approved learners to the Classroom course. Roster sync will grant their website access.</p>
+          <ul id="enrollmentRequestList"></ul>
         </div>
       </section>
 
       <section class="lesson-layout">
         <aside class="section-surface lesson-sidebar">
-          <h3>Course tracks</h3>
-          <ul>
-            <li class="active">Foundations</li>
-            <li>Swara practice</li>
-            <li>Raag studies</li>
-            <li>Taal and rhythm</li>
-            <li>Bandish building</li>
+          <h3>Course catalog</h3>
+          <ul id="lessonTopicFilters">
+            <li class="active">All courses</li>
           </ul>
         </aside>
 
-        <div class="lesson-cards">
-          <article class="lesson-card section-surface">
-            <div class="lesson-top">
-              <span class="chip accent">Lesson 1</span>
-              <span>10 min</span>
-            </div>
-            <h3>Introduction to Swaras</h3>
-            <p>Learn the seven notes and the structure behind melodic movement.</p>
-            <button class="primary-btn small">Open lesson</button>
-          </article>
-
-          <article class="lesson-card section-surface">
-            <div class="lesson-top">
-              <span class="chip neutral">Lesson 2</span>
-              <span>15 min</span>
-            </div>
-            <h3>Understanding Thaat</h3>
-            <p>Explore how the parent scale shapes a raag’s identity and mood.</p>
-            <button class="primary-btn small">Open lesson</button>
-          </article>
-
-          <article class="lesson-card section-surface">
-            <div class="lesson-top">
-              <span class="chip purple">Lesson 3</span>
-              <span>18 min</span>
-            </div>
-            <h3>Prahar-driven practice</h3>
-            <p>Map practice sessions to time of day and discover suitable raags.</p>
-            <button class="primary-btn small">Open lesson</button>
-          </article>
-
-          <article class="lesson-card section-surface">
-            <div class="lesson-top">
-              <span class="chip green">Lesson 4</span>
-              <span>12 min</span>
-            </div>
-            <h3>Rhythmic structures</h3>
-            <p>Build confidence in tala and cycle-based patterns through guided drills.</p>
-            <button class="primary-btn small">Open lesson</button>
-          </article>
+        <div id="lessonCards" class="lesson-cards" aria-live="polite">
+          <p class="lesson-status">Loading available courses...</p>
         </div>
       </section>
     </main>
@@ -132,5 +113,6 @@
 
     <script src="js/main.js"></script>
     <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/classroom-lessons.js"></script>
   </body>
 </html>
