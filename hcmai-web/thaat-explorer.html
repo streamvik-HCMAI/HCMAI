@@ -51,80 +51,25 @@
           </div>
         </div>
 
-        <div class="thaat-grid">
-          <article class="thaat-card">
-            <div class="thaat-header">
-              <span class="thaat-badge">Bilawal</span>
-              <strong>Natural and bright</strong>
-            </div>
-            <p>All notes are shuddha, creating a clear and uplifting tonal character.</p>
-            <ul>
-              <li>Key raags: Des, Kedar, Bilawal</li>
-              <li>Typical mood: serene and open</li>
-            </ul>
-          </article>
-
-          <article class="thaat-card">
-            <div class="thaat-header">
-              <span class="thaat-badge purple">Kalyan</span>
-              <strong>Royal and expansive</strong>
-            </div>
-            <p>Contains the tivra Madhyam and establishes a majestic, full-bodied melody.</p>
-            <ul>
-              <li>Key raags: Yaman, Kalyan, Miyan ki Malhar</li>
-              <li>Typical mood: grand and devotional</li>
-            </ul>
-          </article>
-
-          <article class="thaat-card">
-            <div class="thaat-header">
-              <span class="thaat-badge green">Khamaj</span>
-              <strong>Soft and melodic</strong>
-            </div>
-            <p>Often associated with a gentle emotional flow and a relaxed tonal balance.</p>
-            <ul>
-              <li>Key raags: Kamod, Bageshree, Gaud Sarang</li>
-              <li>Typical mood: lyrical and romantic</li>
-            </ul>
-          </article>
-
-          <article class="thaat-card">
-            <div class="thaat-header">
-              <span class="thaat-badge orange">Bhairav</span>
-              <strong>Devotional and intimate</strong>
-            </div>
-            <p>A highly expressive thaat used for emotional and spiritual depth.</p>
-            <ul>
-              <li>Key raags: Bhairav, Ahir Bhairav</li>
-              <li>Typical mood: contemplative and warm</li>
-            </ul>
-          </article>
-
-          <article class="thaat-card">
-            <div class="thaat-header">
-              <span class="thaat-badge blue">Asavari</span>
-              <strong>Reflective and tender</strong>
-            </div>
-            <p>Known for a gentle, moving melodic quality with emotional nuance.</p>
-            <ul>
-              <li>Key raags: Asavari, Darbari Kanada</li>
-              <li>Typical mood: introspective and graceful</li>
-            </ul>
-          </article>
-
-          <article class="thaat-card">
-            <div class="thaat-header">
-              <span class="thaat-badge red">Bhairavi</span>
-              <strong>Dark and dramatic</strong>
-            </div>
-            <p>Creates weight, contrast, and intensity through a more grounded tonal spectrum.</p>
-            <ul>
-              <li>Key raags: Malkauns, Bhairavi</li>
-              <li>Typical mood: deep and powerful</li>
-            </ul>
-          </article>
+        <div class="thaat-toolbar">
+          <label class="search-box">
+            <span>Search Thaats or Raags</span>
+            <input id="thaatSearch" type="search" placeholder="Type a thaat or Raag name" />
+          </label>
+          <label>
+            <span>Record status</span>
+            <select id="thaatStatusFilter">
+              <option value="all">All accessible records</option>
+              <option value="published">Published</option>
+              <option value="draft">Source candidates</option>
+            </select>
+          </label>
+          <p id="thaatStatus" class="raag-status" role="status" aria-live="polite">Loading Thaats from the Raag library...</p>
+          <p class="thaat-source-note">Thaat labels follow each source record’s classification; schemes can differ between traditions and datasets.</p>
         </div>
       </section>
+
+      <section class="thaat-grid" id="thaatGrid"></section>
     </main>
 
     <footer class="site-footer">
@@ -150,5 +95,6 @@
 
     <script src="js/main.js"></script>
     <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/thaat-explorer.js?v=20261004-v1"></script>
   </body>
 </html>

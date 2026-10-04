@@ -25,6 +25,8 @@ Raags are stored in the Firestore `raags` collection. A document may use these f
 
 `isPublished` must remain `false` until a knowledgeable reviewer verifies a record. Imported source candidates are not automatically canonical or authoritative.
 
+Raag Explorer shows published records to visitors and includes drafts only for administrators. Administrators can filter by published/source-candidate status. Thaat Explorer groups the accessible Raag records by their stored `thaat` values and links back to the filtered Raag search. Imported source labels are preserved as provided; source-specific Thaat systems are not silently converted into a single standard classification.
+
 ## JSON bulk import
 
 The Raag Explorer admin controls accept either a top-level array or `{ "raags": [...] }`. Every record must contain `name`, `sourceName`, and `license`. Imports are saved as drafts unless `isPublished` is explicitly `true`. Fields that contain multiple values accept arrays or comma-separated strings.

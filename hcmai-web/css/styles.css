@@ -781,6 +781,32 @@ h1, h2, h3, h4, p {
   min-width: 0;
 }
 
+.raag-record-status {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 8px;
+  padding: 4px 7px;
+  border: 1px solid var(--stroke);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.raag-record-status.candidate {
+  border-color: #e7c477;
+  background: #fff9e8;
+  color: #76520a;
+}
+
+.raag-record-status.published {
+  border-color: #9bcbb9;
+  background: #edf7f2;
+  color: #24634d;
+}
+
 .raag-card .card-open {
   min-height: 100%;
   padding: 0;
@@ -813,15 +839,98 @@ h1, h2, h3, h4, p {
 
 .thaat-grid {
   display: grid;
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 14px;
   margin-top: 22px;
 }
 
 .thaat-card {
+  display: block;
+  min-width: 0;
   padding: 18px 16px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #fff, #f7f9ff);
-  border: 1px solid rgba(18, 24, 38, 0.06);
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid var(--stroke);
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.thaat-card:hover,
+.thaat-card:focus-visible {
+  border-color: var(--primary);
+  background: #f7fafc;
+}
+
+.thaat-card h2 {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+  overflow-wrap: anywhere;
+}
+
+.thaat-card p {
+  margin: 6px 0;
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+.thaat-card .thaat-source-note {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.thaat-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+  gap: 14px;
+  align-items: end;
+  margin-top: 16px;
+}
+
+.thaat-toolbar label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.thaat-toolbar input,
+.thaat-toolbar select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+}
+
+.thaat-toolbar .raag-status {
+  grid-column: 1 / -1;
+}
+
+.thaat-toolbar .thaat-source-note {
+  grid-column: 1 / -1;
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .thaat-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .thaat-toolbar .raag-status {
+    grid-column: auto;
+  }
+
+  .thaat-toolbar .thaat-source-note {
+    grid-column: auto;
+  }
 }
 
 .thaat-header {

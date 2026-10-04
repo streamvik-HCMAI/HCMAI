@@ -1,6 +1,8 @@
 import { collection, addDoc, doc, getDocs, getFirestore, orderBy, query, updateDoc, where, writeBatch } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 import { getBlob, getStorage, ref, uploadBytes } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js';
 import { auth } from './auth.js';
+import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
+import { fetchAccessibleRaags } from './raag-data.js';
 
 const db = getFirestore();
 const storage = getStorage();
@@ -16,8 +18,18 @@ const filterForm = document.getElementById('raagFilterForm');
 const jatiFilter = document.getElementById('raagJatiFilter');
 const thaatFilter = document.getElementById('raagThaatFilter');
 const timeFilter = document.getElementById('raagTimeFilter');
+const recordStatusFilter = document.getElementById('raagStatusFilter');
 const status = document.getElementById('raagStatus');
 let allRaags = [];
+let isAdminViewer = false;
+
+function formatCatalogType(catalogType = '') {
+  const labels = {
+    'named-raag-candidate': 'Named Raag candidate',
+    'dunya-hindustani-raag': 'Dunya catalog entry'
+  };
+  return labels[catalogType] || catalogType.replaceAll('-', ' ');
+}
 
 function escapeHtml(value = '') {
   return String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
@@ -44,6 +56,9 @@ function renderRaags(raags) {
     const badge = document.createElement('span');
     badge.className = 'card-badge accent';
     badge.textContent = raag.name;
+    const recordStatus = document.createElement('span');
+    recordStatus.className = raag.isPublished ? 'raag-record-status published' : 'raag-record-status candidate';
+    recordStatus.textContent = raag.isPublished ? 'Published' : `${raag.sourceName || 'Source'} candidate`;
     const heading = document.createElement('h3');
     heading.textContent = raag.thaat ? `${raag.thaat} thaat` : 'Raag details';
     const jati = document.createElement('p');
@@ -54,8 +69,10 @@ function renderRaags(raags) {
     time.textContent = raag.timeOfDay || 'Time not recorded';
     const prahar = document.createElement('span');
     prahar.textContent = raag.prahar ? `Prahar ${raag.prahar}` : 'Prahar not recorded';
-    meta.append(time, prahar);
-    button.append(badge, heading, jati, meta);
+    const source = document.createElement('span');
+    source.textContent = formatCatalogType(raag.catalogType || 'Traditional Raag record');
+    meta.append(time, prahar, source);
+    button.append(badge, recordStatus, heading, jati, meta);
     button.addEventListener('click', () => openRaagDetail(raag));
     article.append(button);
     grid.append(article);
@@ -67,9 +84,11 @@ function filterRaags() {
   const selectedJati = jatiFilter?.value.toLowerCase() || '';
   const selectedThaat = thaatFilter?.value.toLowerCase() || '';
   const selectedTime = timeFilter?.value.toLowerCase() || '';
+  const selectedStatus = recordStatusFilter?.value || 'all';
   const filtered = allRaags.filter((raag) => {
     const searchable = [
       raag.name, raag.nameHindi, ...(raag.aliases || []), raag.description, raag.thaat, raag.jati,
+      raag.sourceName, raag.catalogType,
       raag.timeOfDay, raag.prahar, raag.aroha, raag.avaroha, raag.pakad,
       raag.vadi, raag.samvadi, raag.rasa, ...(raag.swaras || []),
       ...(raag.komalSwaras || []), ...(raag.teevraSwaras || [])
@@ -77,23 +96,32 @@ function filterRaags() {
     return searchable.includes(search)
       && (!selectedJati || String(raag.jati || '').toLowerCase().includes(selectedJati))
       && (!selectedThaat || String(raag.thaat || '').toLowerCase() === selectedThaat)
-      && (!selectedTime || String(raag.timeOfDay || '').toLowerCase().includes(selectedTime));
+      && (!selectedTime || String(raag.timeOfDay || '').toLowerCase().includes(selectedTime))
+      && (selectedStatus === 'all'
+        || (selectedStatus === 'published' && raag.isPublished === true)
+        || (selectedStatus === 'draft' && raag.isPublished !== true));
   });
 
   renderRaags(filtered);
-  if (status) status.textContent = `${filtered.length} of ${allRaags.length} raags`;
+  if (status) status.textContent = `${filtered.length} of ${allRaags.length} ${isAdminViewer ? 'Raag records' : 'published raags'}`;
 }
 
-async function loadRaags() {
+async function loadRaags(user = auth.currentUser) {
   if (!grid) return;
   status.textContent = 'Loading the live raag library...';
   try {
-    const raagQuery = query(collection(db, 'raags'), where('isPublished', '==', true));
-    const snapshot = await getDocs(raagQuery);
-    allRaags = snapshot.docs.map((document) => ({ id: document.id, ...document.data() }))
-      .sort((left, right) => left.name.localeCompare(right.name));
+    const result = await fetchAccessibleRaags(user);
+    allRaags = result.raags;
+    isAdminViewer = result.isAdmin;
+    const draftOption = recordStatusFilter?.querySelector('option[value="draft"]');
+    if (draftOption) draftOption.hidden = !isAdminViewer;
+    if (!isAdminViewer && recordStatusFilter) recordStatusFilter.value = 'published';
     const thaats = [...new Set(allRaags.map((raag) => raag.thaat).filter(Boolean))].sort();
     thaatFilter?.replaceChildren(new Option('Any', ''), ...thaats.map((thaat) => new Option(thaat, thaat)));
+    const requestedThaat = new URLSearchParams(window.location.search).get('thaat');
+    if (requestedThaat && thaatFilter && thaats.some((thaat) => thaat.toLocaleLowerCase() === requestedThaat.toLocaleLowerCase())) {
+      thaatFilter.value = thaats.find((thaat) => thaat.toLocaleLowerCase() === requestedThaat.toLocaleLowerCase());
+    }
     filterRaags();
   } catch (error) {
     allRaags = [];
@@ -136,7 +164,8 @@ function openRaagDetail(raag) {
   const factGrid = document.createElement('dl');
   factGrid.className = 'raag-detail-facts';
   const facts = [
-    ['Thaat', raag.thaat], ['Jati', raag.jati], ['Time', raag.timeOfDay],
+    ['Record status', raag.isPublished ? 'Published' : 'Unpublished source candidate'],
+    ['Source type', raag.catalogType], ['Thaat', raag.thaat], ['Jati', raag.jati], ['Time', raag.timeOfDay],
     ['Prahar', raag.prahar], ['Tradition', raag.tradition],
     ['Aroha note count', raag.ascendingNoteCount], ['Avaroha note count', raag.descendingNoteCount],
     ['Vadi', raag.vadi], ['Samvadi', raag.samvadi],
@@ -609,9 +638,10 @@ searchInput?.addEventListener('input', filterRaags);
 jatiFilter?.addEventListener('change', filterRaags);
 thaatFilter?.addEventListener('change', filterRaags);
 timeFilter?.addEventListener('change', filterRaags);
+recordStatusFilter?.addEventListener('change', filterRaags);
 filterForm?.addEventListener('submit', (event) => {
   event.preventDefault();
   filterRaags();
 });
 document.querySelector('[data-admin-only]')?.addEventListener('click', openAddRaag);
-loadRaags();
+onAuthStateChanged(auth, (user) => loadRaags(user));
