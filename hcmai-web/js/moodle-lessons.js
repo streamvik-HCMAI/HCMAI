@@ -61,7 +61,7 @@ if (lessonCards && courseFilters) {
     if (!visibleCourses.length) {
       const empty = document.createElement('p');
       empty.className = 'lesson-status';
-      empty.textContent = 'No public Moodle courses are available yet.';
+      empty.textContent = 'No courses are available yet.';
       lessonCards.append(empty);
       return;
     }
@@ -73,9 +73,9 @@ if (lessonCards && courseFilters) {
       top.className = 'lesson-top';
       const category = document.createElement('span');
       category.className = 'chip accent';
-      category.textContent = course.categoryName || 'Moodle course';
+      category.textContent = course.categoryName || 'Course';
       const platform = document.createElement('span');
-      platform.textContent = 'Moodle';
+      platform.textContent = 'HCMAI';
       top.append(category, platform);
 
       const title = document.createElement('h3');
@@ -86,7 +86,7 @@ if (lessonCards && courseFilters) {
       openLink.className = 'primary-btn small';
       openLink.href = safeCourseUrl(course.courseUrl) || '#';
       openLink.textContent = 'Open course';
-      openLink.setAttribute('aria-label', `Open ${title.textContent} in Moodle`);
+      openLink.setAttribute('aria-label', `Open ${title.textContent}`);
       if (!course.courseUrl || !safeCourseUrl(course.courseUrl)) {
         openLink.setAttribute('aria-disabled', 'true');
         openLink.addEventListener('click', (event) => event.preventDefault());
@@ -103,7 +103,7 @@ if (lessonCards && courseFilters) {
     lessonCards.replaceChildren();
     const loading = document.createElement('p');
     loading.className = 'lesson-status';
-    loading.textContent = 'Loading Moodle courses...';
+    loading.textContent = 'Loading courses...';
     lessonCards.append(loading);
 
     try {
@@ -120,24 +120,24 @@ if (lessonCards && courseFilters) {
       const message = document.createElement('p');
       message.className = 'lesson-status';
       message.textContent = error.code === 'permission-denied'
-        ? 'The Moodle catalog is not connected in this environment yet.'
-        : 'Moodle courses are temporarily unavailable.';
+        ? 'The course directory is not connected yet.'
+        : 'Courses are temporarily unavailable.';
       lessonCards.append(message);
-      console.error('Unable to load Moodle courses.', error);
+      console.error('Unable to load the course directory.', error);
     }
   };
 
   syncButton?.addEventListener('click', async () => {
     syncButton.disabled = true;
-    syncStatus.textContent = 'Refreshing the Moodle course catalog...';
+    syncStatus.textContent = 'Refreshing the course directory...';
     try {
       const response = await syncMoodleCatalog();
-      syncStatus.textContent = `Catalog refreshed. ${response.data.courseCount} public courses available.`;
+      syncStatus.textContent = `Course directory refreshed. ${response.data.courseCount} courses available.`;
       await loadCourses();
     } catch (error) {
       syncStatus.textContent = error.code === 'functions/not-found'
-        ? 'Moodle sync is not deployed yet. Configure the Moodle service and deploy Functions first.'
-        : (error.message || 'Moodle sync is not configured yet.');
+        ? 'Course sync is not deployed yet. Configure the learning platform connection first.'
+        : (error.message || 'Course sync is not configured yet.');
     } finally {
       syncButton.disabled = false;
     }
