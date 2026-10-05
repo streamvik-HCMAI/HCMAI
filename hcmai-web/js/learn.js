@@ -31,6 +31,31 @@ function formatCatalogType(catalogType = '') {
   return labels[catalogType] || catalogType.replaceAll('-', ' ');
 }
 
+function formatJatiValue(value) {
+  const countLabels = { 3: '3-note', 4: '4-note', 5: 'Audav', 6: 'Shadav', 7: 'Sampurna' };
+  const counts = String(value || '').split('/');
+  if (counts.length !== 2) return String(value || '');
+  return counts.map((count) => countLabels[count] || `${count}-note`).join(' / ');
+}
+
+function formatSamayValue(value) {
+  const labels = {
+    'sarva-kaaleen': 'All times (Sarva-kaaleen)',
+    vasant: 'Spring (Vasant)',
+    greeshma: 'Summer (Greeshma)',
+    varshaa: 'Rainy season (Varshaa)',
+    sharad: 'Autumn (Sharad)',
+    hemant: 'Early winter (Hemant)',
+    shishir: 'Winter (Shishir)',
+    other: 'Other source label',
+    special: 'Special source label'
+  };
+  const normalized = String(value || '').trim().toLowerCase();
+  const prahar = normalized.match(/^prahar[- ]?(\d+)$/);
+  if (prahar) return `Prahar ${prahar[1]} (source label)`;
+  return labels[normalized] || String(value || '');
+}
+
 function escapeHtml(value = '') {
   return String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
 }
@@ -94,9 +119,11 @@ function filterRaags() {
       ...(raag.komalSwaras || []), ...(raag.teevraSwaras || [])
     ].join(' ').toLowerCase();
     return searchable.includes(search)
-      && (!selectedJati || String(raag.jati || '').toLowerCase().includes(selectedJati))
+      && (!selectedJati || String(raag.jati || '').toLowerCase() === selectedJati)
       && (!selectedThaat || String(raag.thaat || '').toLowerCase() === selectedThaat)
-      && (!selectedTime || String(raag.timeOfDay || '').toLowerCase().includes(selectedTime))
+      && (!selectedTime || (selectedTime === '__missing__'
+        ? !String(raag.timeOfDay || '').trim()
+        : String(raag.timeOfDay || '').trim().toLowerCase() === selectedTime))
       && (selectedStatus === 'all'
         || (selectedStatus === 'published' && raag.isPublished === true)
         || (selectedStatus === 'draft' && raag.isPublished !== true));
@@ -116,8 +143,17 @@ async function loadRaags(user = auth.currentUser) {
     const draftOption = recordStatusFilter?.querySelector('option[value="draft"]');
     if (draftOption) draftOption.hidden = !isAdminViewer;
     if (!isAdminViewer && recordStatusFilter) recordStatusFilter.value = 'published';
+    const jatis = [...new Set(allRaags.map((raag) => String(raag.jati || '').trim()).filter(Boolean))]
+      .sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
+    jatiFilter?.replaceChildren(new Option('Any', ''), ...jatis.map((jati) => new Option(`${jati} · ${formatJatiValue(jati)}`, jati.toLowerCase())));
     const thaats = [...new Set(allRaags.map((raag) => raag.thaat).filter(Boolean))].sort();
     thaatFilter?.replaceChildren(new Option('Any', ''), ...thaats.map((thaat) => new Option(thaat, thaat)));
+    const samays = [...new Set(allRaags.map((raag) => String(raag.timeOfDay || '').trim()).filter(Boolean))].sort();
+    timeFilter?.replaceChildren(
+      new Option('Any recorded time', ''),
+      ...samays.map((samay) => new Option(formatSamayValue(samay), samay.toLowerCase())),
+      new Option('Not recorded', '__missing__')
+    );
     const requestedThaat = new URLSearchParams(window.location.search).get('thaat');
     if (requestedThaat && thaatFilter && thaats.some((thaat) => thaat.toLocaleLowerCase() === requestedThaat.toLocaleLowerCase())) {
       thaatFilter.value = thaats.find((thaat) => thaat.toLocaleLowerCase() === requestedThaat.toLocaleLowerCase());

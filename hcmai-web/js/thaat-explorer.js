@@ -67,7 +67,7 @@ function renderThaats() {
     grid.appendChild(card);
   });
 
-  status.textContent = `${thaats.length} Thaats across ${allRaags.length} accessible Raag records${isAdminViewer ? ' (published and source candidates)' : ' (published only)'}.`;
+  status.textContent = `${thaats.length} source Thaat labels across ${allRaags.length} accessible Raag records${isAdminViewer ? ' (published and source candidates)' : ' (published only)'}.`;
 }
 
 async function loadThaats(user) {
