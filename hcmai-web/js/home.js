@@ -48,10 +48,10 @@ function renderRecommendations() {
   praharLabel.textContent = `${context.label} · ${context.range}`;
   recommendationList.replaceChildren();
 
-  const matches = accessibleRaags.filter((raag) => {
-    const match = getRaagPrahars(raag);
-    return match.numbers.has(context.number) || match.allTimes;
-  });
+  const praharMatches = accessibleRaags.filter((raag) => getRaagPrahars(raag).numbers.has(context.number));
+  const praharIds = new Set(praharMatches.map((raag) => raag.id));
+  const allTimeMatches = accessibleRaags.filter((raag) => getRaagPrahars(raag).allTimes && !praharIds.has(raag.id));
+  const matches = [...praharMatches, ...allTimeMatches];
 
   if (!matches.length) {
     status.textContent = isAdminViewer
@@ -60,7 +60,11 @@ function renderRecommendations() {
     return;
   }
 
-  status.textContent = `${matches.length} Raag recommendations for ${context.label} in ${context.zone}${isAdminViewer ? '; source candidates are marked below.' : '.'}`;
+  const recommendationSummary = [
+    praharMatches.length ? `${praharMatches.length} for ${context.label}` : '',
+    allTimeMatches.length ? `${allTimeMatches.length} all-time` : ''
+  ].filter(Boolean).join(' · ');
+  status.textContent = `${recommendationSummary} Raag recommendations in ${context.zone}${isAdminViewer ? '; source candidates are marked below.' : '.'}`;
   matches.forEach((raag) => {
     const item = document.createElement('article');
     item.className = 'mini-card';
