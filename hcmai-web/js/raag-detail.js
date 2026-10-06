@@ -583,14 +583,23 @@ function formatSamay(value) {
 }
 
 async function initialize(user) {
+  currentUser = user;
+  isAdmin = false;
+  if (isEditing) {
+    renderReadOnlyRecord();
+    setEditing(false);
+  }
+
   if (!recordId || !/^[a-zA-Z0-9_-]{1,120}$/.test(recordId)) {
     pageStatus.textContent = 'Invalid Raag record ID.';
     return;
   }
   try {
-    currentUser = user;
-    isAdmin = Boolean(user && (await user.getIdTokenResult()).claims.admin === true);
+    const hasAdminClaim = Boolean(user && (await user.getIdTokenResult()).claims.admin === true);
+    if (auth.currentUser?.uid !== user?.uid) return;
+    isAdmin = hasAdminClaim;
     const snapshot = await getDoc(doc(db, 'raags', recordId));
+    if (auth.currentUser?.uid !== user?.uid) return;
     if (!snapshot.exists()) {
       pageStatus.textContent = 'This Raag is unavailable or has not been published.';
       return;
