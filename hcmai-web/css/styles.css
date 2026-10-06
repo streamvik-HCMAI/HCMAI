@@ -1435,6 +1435,105 @@ input[type="range"] {
   margin: 10px 0 4px;
 }
 
+.saved-loops {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--stroke);
+}
+
+.saved-loops-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.saved-loops-header h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.saved-loops-header > span,
+.saved-loops-empty,
+.saved-loop-details span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.saved-loops-empty {
+  margin: 10px 0 0;
+}
+
+.saved-loop-list {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.saved-loop-list[hidden],
+.clip-save-controls[hidden] {
+  display: none;
+}
+
+.saved-loop-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--stroke);
+}
+
+.saved-loop-details {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.saved-loop-details strong {
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.saved-loop-actions,
+.clip-save-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.saved-loop-actions {
+  flex-shrink: 0;
+}
+
+.clip-save-controls {
+  display: grid;
+  gap: 8px;
+  max-width: 620px;
+}
+
+.clip-save-controls > label {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.clip-save-row input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+}
+
 .clip-audio-file-name {
   margin: 0;
   overflow-wrap: anywhere;
@@ -1525,6 +1624,20 @@ input[type="range"] {
 .clip-workspace > .primary-btn {
   justify-self: start;
 }
+
+  .saved-loop-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .saved-loop-actions {
+    width: 100%;
+  }
+
+  .clip-save-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
 
 .clip-loop-panel button:disabled {
   cursor: not-allowed;

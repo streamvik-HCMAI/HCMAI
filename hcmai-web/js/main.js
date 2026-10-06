@@ -80,6 +80,12 @@ const markClipStart = document.getElementById('markClipStart');
 const markClipEnd = document.getElementById('markClipEnd');
 const clipCurrentTime = document.getElementById('clipCurrentTime');
 const clipLoopToggle = document.getElementById('clipLoopToggle');
+const savedLoopsCount = document.getElementById('savedLoopsCount');
+const savedLoopsEmpty = document.getElementById('savedLoopsEmpty');
+const savedYouTubeLoopsList = document.getElementById('savedYouTubeLoops');
+const youtubeSavedControls = document.getElementById('youtubeSavedControls');
+const savedClipName = document.getElementById('savedClipName');
+const saveYouTubeLoopButton = document.getElementById('saveYouTubeLoop');
 
 if (
   clipVideoForm && clipVideoUrl && clipLoadButton && clipAudioFile && clipAudioFileName && clipWorkspace && clipYoutubeFrame && clipLocalAudio &&
@@ -93,8 +99,11 @@ if (
   let loopSeekAvailableAt = 0;
   let currentVideoId = '';
   let activeClipSource = '';
+  let selectedSavedLoopId = '';
+  let savedYouTubeLoops = [];
   let localClipObjectUrl = null;
   let clipClockInterval = null;
+  const savedLoopsStorageKey = 'hcmai.practice.saved-youtube-loops.v1';
 
   const setClipStatus = (message) => {
     clipStatus.textContent = message;
@@ -144,6 +153,75 @@ if (
 
     if (values.length === 3) return values[0] * 3600 + minutes * 60 + seconds;
     return minutes * 60 + seconds;
+  };
+
+  const readSavedYouTubeLoops = () => {
+    try {
+      const storedLoops = JSON.parse(window.localStorage.getItem(savedLoopsStorageKey) || '[]');
+      if (!Array.isArray(storedLoops)) return [];
+      return storedLoops.filter((loop) => loop
+        && typeof loop.id === 'string'
+        && typeof loop.name === 'string'
+        && /^[\w-]{11}$/.test(loop.videoId)
+        && Number.isInteger(loop.startSeconds)
+        && Number.isInteger(loop.endSeconds)
+        && loop.startSeconds >= 0
+        && loop.endSeconds > loop.startSeconds);
+    } catch {
+      return [];
+    }
+  };
+
+  savedYouTubeLoops = readSavedYouTubeLoops();
+
+  const persistSavedYouTubeLoops = () => {
+    try {
+      window.localStorage.setItem(savedLoopsStorageKey, JSON.stringify(savedYouTubeLoops));
+      return true;
+    } catch {
+      setClipStatus('Saved loops could not be stored in this browser. Check its available site storage.');
+      return false;
+    }
+  };
+
+  const renderSavedYouTubeLoops = () => {
+    savedLoopsCount.textContent = `${savedYouTubeLoops.length} saved`;
+    savedLoopsEmpty.hidden = savedYouTubeLoops.length > 0;
+    savedYouTubeLoopsList.hidden = savedYouTubeLoops.length === 0;
+    savedYouTubeLoopsList.replaceChildren();
+
+    savedYouTubeLoops.forEach((loop) => {
+      const item = document.createElement('li');
+      item.className = 'saved-loop-item';
+
+      const details = document.createElement('div');
+      details.className = 'saved-loop-details';
+      const name = document.createElement('strong');
+      name.textContent = loop.name;
+      const boundaries = document.createElement('span');
+      boundaries.textContent = `YouTube clip ${formatClipTime(loop.startSeconds)} - ${formatClipTime(loop.endSeconds)}`;
+      details.append(name, boundaries);
+
+      const actions = document.createElement('div');
+      actions.className = 'saved-loop-actions';
+      const loadButton = document.createElement('button');
+      loadButton.className = 'secondary-btn small';
+      loadButton.type = 'button';
+      loadButton.dataset.savedLoopAction = 'load';
+      loadButton.dataset.savedLoopId = loop.id;
+      loadButton.textContent = 'Load';
+      loadButton.setAttribute('aria-label', `Load ${loop.name}`);
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'secondary-btn small';
+      deleteButton.type = 'button';
+      deleteButton.dataset.savedLoopAction = 'delete';
+      deleteButton.dataset.savedLoopId = loop.id;
+      deleteButton.textContent = 'Delete';
+      deleteButton.setAttribute('aria-label', `Delete ${loop.name}`);
+      actions.append(loadButton, deleteButton);
+      item.append(details, actions);
+      savedYouTubeLoopsList.append(item);
+    });
   };
 
   const getClipDuration = () => activeClipSource === 'audio'
@@ -246,6 +324,11 @@ if (
     return { start, end };
   };
 
+  const updateSaveYouTubeLoopButton = () => {
+    saveYouTubeLoopButton.disabled = activeClipSource !== 'youtube' || !playerIsReady || !readClipBounds();
+    saveYouTubeLoopButton.textContent = selectedSavedLoopId ? 'Update saved loop' : 'Save loop';
+  };
+
   const loadYouTubeApi = () => {
     if (window.YT?.Player) return Promise.resolve(window.YT);
     if (youtubeApiPromise) return youtubeApiPromise;
@@ -286,6 +369,7 @@ if (
           if (activeClipSource === 'youtube') {
             updateClipDurationHint();
             setClipStatus('Video ready. Set the clip boundaries, then play the loop.');
+            updateSaveYouTubeLoopButton();
           }
 
           startClipClock();
@@ -296,6 +380,7 @@ if (
             enableClipControls();
             updateClipDurationHint();
             setClipStatus('Video ready. Set the clip boundaries, then play the loop.');
+            updateSaveYouTubeLoopButton();
           }
           if (event.data === YT.PlayerState.PLAYING) {
             updateClipDurationHint();
@@ -374,6 +459,8 @@ if (
 
     stopClipPlayback();
     activeClipSource = '';
+    selectedSavedLoopId = '';
+    youtubeSavedControls.hidden = true;
     releaseLocalClip();
     activeClipSource = 'audio';
     clipYoutubeFrame.hidden = true;
@@ -391,28 +478,24 @@ if (
     if (localClipObjectUrl) URL.revokeObjectURL(localClipObjectUrl);
   });
 
-  clipVideoForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
+  const loadYouTubeClip = async (videoId, { startSeconds = 0, endSeconds = 10, savedLoopId = '' } = {}) => {
     clipFallbackLink.hidden = true;
-    const videoId = getVideoId(clipVideoUrl.value);
-    if (!videoId) {
-      setClipStatus('Enter a valid YouTube video link.');
-      return;
-    }
-
     currentVideoId = videoId;
+    selectedSavedLoopId = savedLoopId;
     stopClipPlayback();
     activeClipSource = '';
     releaseLocalClip();
     activeClipSource = 'youtube';
+    youtubeSavedControls.hidden = false;
     clipYoutubeFrame.hidden = false;
     clipLocalAudio.hidden = true;
     clipAudioFileName.textContent = '';
     clipWorkspace.hidden = false;
-    clipStartTime.value = '0:00';
-    clipEndTime.value = '0:10';
+    clipStartTime.value = formatClipTime(startSeconds);
+    clipEndTime.value = formatClipTime(endSeconds);
     clipLoadButton.disabled = true;
     setClipStatus('Loading YouTube player...');
+    updateSaveYouTubeLoopButton();
 
     try {
       const YT = await loadYouTubeApi();
@@ -424,15 +507,95 @@ if (
     } finally {
       clipLoadButton.disabled = false;
     }
+  };
+
+  clipVideoForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const videoId = getVideoId(clipVideoUrl.value);
+    if (!videoId) {
+      setClipStatus('Enter a valid YouTube video link.');
+      return;
+    }
+
+    savedClipName.value = '';
+    await loadYouTubeClip(videoId);
   });
+
+  savedYouTubeLoopsList.addEventListener('click', async (event) => {
+    const button = event.target.closest('button[data-saved-loop-action]');
+    if (!button) return;
+    const savedLoop = savedYouTubeLoops.find((loop) => loop.id === button.dataset.savedLoopId);
+    if (!savedLoop) return;
+
+    if (button.dataset.savedLoopAction === 'delete') {
+      savedYouTubeLoops = savedYouTubeLoops.filter((loop) => loop.id !== savedLoop.id);
+      if (!persistSavedYouTubeLoops()) return;
+      if (selectedSavedLoopId === savedLoop.id) {
+        selectedSavedLoopId = '';
+        updateSaveYouTubeLoopButton();
+      }
+      renderSavedYouTubeLoops();
+      setClipStatus(`Deleted "${savedLoop.name}".`);
+      return;
+    }
+
+    savedLoop.lastPracticedAt = Date.now();
+    savedYouTubeLoops.sort((left, right) => (right.lastPracticedAt || right.updatedAt || 0) - (left.lastPracticedAt || left.updatedAt || 0));
+    persistSavedYouTubeLoops();
+    renderSavedYouTubeLoops();
+    clipVideoUrl.value = `https://www.youtube.com/watch?v=${savedLoop.videoId}`;
+    savedClipName.value = savedLoop.name;
+    await loadYouTubeClip(savedLoop.videoId, {
+      startSeconds: savedLoop.startSeconds,
+      endSeconds: savedLoop.endSeconds,
+      savedLoopId: savedLoop.id
+    });
+  });
+
+  saveYouTubeLoopButton.addEventListener('click', () => {
+    const bounds = readClipBounds();
+    if (activeClipSource !== 'youtube' || !bounds) {
+      setClipStatus('Set valid start and end times before saving this loop.');
+      return;
+    }
+
+    const existingLoop = savedYouTubeLoops.find((loop) => loop.id === selectedSavedLoopId);
+    const name = savedClipName.value.trim()
+      || existingLoop?.name
+      || `Phrase ${formatClipTime(bounds.start)} - ${formatClipTime(bounds.end)}`;
+    const now = Date.now();
+    const savedLoop = {
+      id: existingLoop?.id || (window.crypto?.randomUUID?.() ?? `${now}-${Math.random().toString(36).slice(2)}`),
+      name,
+      videoId: currentVideoId,
+      startSeconds: bounds.start,
+      endSeconds: bounds.end,
+      createdAt: existingLoop?.createdAt || now,
+      updatedAt: now,
+      lastPracticedAt: existingLoop?.lastPracticedAt || now
+    };
+
+    savedYouTubeLoops = [savedLoop, ...savedYouTubeLoops.filter((loop) => loop.id !== savedLoop.id)];
+    if (!persistSavedYouTubeLoops()) return;
+    selectedSavedLoopId = savedLoop.id;
+    savedClipName.value = name;
+    updateSaveYouTubeLoopButton();
+    renderSavedYouTubeLoops();
+    setClipStatus(`Saved "${name}" in this browser.`);
+  });
+
+  [clipStartTime, clipEndTime].forEach((input) => input.addEventListener('input', updateSaveYouTubeLoopButton));
+  renderSavedYouTubeLoops();
 
   markClipStart.addEventListener('click', () => {
     clipStartTime.value = formatClipTime(getClipCurrentTime());
+    updateSaveYouTubeLoopButton();
     setClipStatus('Clip start set to the current position.');
   });
 
   markClipEnd.addEventListener('click', () => {
     clipEndTime.value = formatClipTime(getClipCurrentTime());
+    updateSaveYouTubeLoopButton();
     setClipStatus('Clip end set to the current position.');
   });
 
