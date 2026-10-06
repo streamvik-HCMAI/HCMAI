@@ -27,6 +27,8 @@ Raags are stored in the Firestore `raags` collection. A document may use these f
 
 Raag Explorer shows published records to visitors and includes drafts only for administrators. Administrators can filter by published/source-candidate status. Thaat Explorer groups the accessible Raag records by their stored `thaat` values and links back to the filtered Raag search. Imported source labels are preserved as provided; source-specific Thaat systems are not silently converted into a single standard classification.
 
+Selecting a Raag opens `raag-detail.html?id={documentId}`. Administrators edit curated fields in typed controls; the document ID, source record ID, source data, and classification metadata stay outside the editable form unless explicitly surfaced as read-only. **Save as draft** keeps the record unpublished. **Publish verified Raag** requires name, Thaat, Jati, Aroha, Avaroha, source name, license/permission basis, and review date; Firestore rules still require the admin claim.
+
 ## JSON bulk import
 
 The Raag Explorer admin controls accept either a top-level array or `{ "raags": [...] }`. Every record must contain `name`, `sourceName`, and `license`. Imports are saved as drafts unless `isPublished` is explicitly `true`. Fields that contain multiple values accept arrays or comma-separated strings.

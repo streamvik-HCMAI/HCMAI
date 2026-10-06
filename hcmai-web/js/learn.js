@@ -74,9 +74,9 @@ function renderRaags(raags) {
   raags.forEach((raag) => {
     const article = document.createElement('article');
     article.className = 'music-card raag-card';
-    const button = document.createElement('button');
+    const button = document.createElement('a');
     button.className = 'card-open';
-    button.type = 'button';
+    button.href = `raag-detail.html?id=${encodeURIComponent(raag.id)}`;
 
     const badge = document.createElement('span');
     badge.className = 'card-badge accent';
@@ -98,7 +98,6 @@ function renderRaags(raags) {
     source.textContent = formatCatalogType(raag.catalogType || 'Traditional Raag record');
     meta.append(time, prahar, source);
     button.append(badge, recordStatus, heading, jati, meta);
-    button.addEventListener('click', () => openRaagDetail(raag));
     article.append(button);
     grid.append(article);
   });

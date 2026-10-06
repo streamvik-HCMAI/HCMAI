@@ -1434,6 +1434,7 @@ input[type="range"] {
 }
 
 .card-open {
+  display: block;
   width: 100%;
   border: 0;
   padding: 0;
@@ -1500,6 +1501,170 @@ input[type="range"] {
   color: var(--text);
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+.raag-detail-back {
+  display: inline-flex;
+  margin: 4px 0 14px;
+}
+
+.raag-detail-hero {
+  display: grid;
+  gap: 18px;
+}
+
+.raag-detail-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.raag-detail-heading h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  overflow-wrap: anywhere;
+}
+
+.raag-detail-summary {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.raag-detail-content {
+  display: grid;
+  gap: 16px;
+}
+
+.raag-detail-notation {
+  padding: 14px 16px;
+  border-left: 3px solid var(--green);
+  background: rgba(29, 185, 84, 0.06);
+}
+
+.raag-detail-notation h2 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+.raag-detail-notation p,
+.raag-detail-description {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.raag-admin-form {
+  display: grid;
+  gap: 14px;
+}
+
+.raag-detail-content[hidden],
+.raag-admin-form[hidden],
+.raag-detail-admin-actions [hidden] {
+  display: none;
+}
+
+.raag-topic-form[hidden] {
+  display: none;
+}
+
+.raag-recordings {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--stroke);
+}
+
+.raag-recordings .section-head {
+  align-items: center;
+}
+
+.raag-recordings h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.raag-topic-form {
+  padding: 14px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+}
+
+.raag-edit-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+}
+
+.raag-edit-group legend {
+  padding: 0 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.raag-edit-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.raag-edit-field input,
+.raag-edit-field textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-weight: 400;
+}
+
+.raag-edit-field textarea {
+  min-height: 68px;
+  resize: vertical;
+}
+
+.raag-edit-field input[readonly] {
+  background: #f2f4f7;
+  color: var(--muted);
+}
+
+.raag-provenance {
+  padding-top: 12px;
+  border-top: 1px solid var(--stroke);
+}
+
+.raag-provenance summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.raag-provenance .raag-detail-facts {
+  margin-top: 12px;
+}
+
+@media (max-width: 620px) {
+  .raag-detail-heading {
+    display: grid;
+  }
+
+  .raag-edit-group {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .raag-notation {

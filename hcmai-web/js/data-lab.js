@@ -49,7 +49,9 @@ let currentManifest = null;
 let currentPage = 0;
 let selectedCompositionRecordId = '';
 let selectedCompositionSourceRecordId = '';
+let selectedCompositionOriginal = null;
 let selectedSourceDocument = null;
+let selectedSourceOriginal = null;
 const sourcePageSize = 50;
 let sourcePage = 0;
 let sourcePageCursors = [null];
@@ -75,34 +77,153 @@ function formatValue(value) {
   return String(value);
 }
 
-function toEditableJson(record) {
-  const editable = { ...record };
-  delete editable.id;
-  delete editable.sourceRecordId;
-  return JSON.stringify(editable, null, 2);
+function cloneRecord(value) {
+  return JSON.parse(JSON.stringify(value));
 }
 
-function parseEditableRecord(text, immutableSourceRecordId) {
-  const value = JSON.parse(text);
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('Record fields must be a JSON object.');
+function setAtPath(target, path, value) {
+  const parent = path.slice(0, -1).reduce((current, key) => current[key], target);
+  parent[path[path.length - 1]] = value;
+}
+
+function renderPrimitiveControl(container, labelText, value, path, { disabled = false } = {}) {
+  const label = document.createElement('label');
+  label.className = 'dataset-edit-field';
+  const caption = document.createElement('span');
+  caption.textContent = labelText;
+  let input;
+  const type = typeof value;
+  if (type === 'boolean') {
+    input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = value;
+  } else if (type === 'number') {
+    input = document.createElement('input');
+    input.type = 'number';
+    input.step = 'any';
+    input.value = String(value);
+  } else if (type === 'string') {
+    input = value.length > 100 ? document.createElement('textarea') : document.createElement('input');
+    if (input instanceof HTMLInputElement) input.type = 'text';
+    input.value = value;
+  } else {
+    input = document.createElement('input');
+    input.type = 'text';
+    input.value = value === null ? 'null (no source value)' : String(value);
+    disabled = true;
   }
-  if (Object.hasOwn(value, 'id') || Object.hasOwn(value, 'sourceRecordId')) {
-    throw new Error('Record IDs are locked and cannot be changed here.');
-  }
-  const checkArrays = (item, insideArray = false, path = 'record') => {
-    if (Array.isArray(item)) {
-      if (insideArray) throw new Error(`${path} contains nested arrays, which Firestore does not support.`);
-      item.forEach((child, index) => checkArrays(child, true, `${path}[${index}]`));
+  input.dataset.editPath = JSON.stringify(path);
+  input.dataset.valueType = type;
+  input.disabled = disabled;
+  label.append(caption, input);
+  container.appendChild(label);
+}
+
+function renderStructuredFields(container, value, path = [], depth = 0) {
+  if (Array.isArray(value)) {
+    if (value.every((item) => item === null || ['string', 'number', 'boolean'].includes(typeof item))) {
+      const group = document.createElement('fieldset');
+      group.className = 'dataset-edit-group';
+      const legend = document.createElement('legend');
+      legend.textContent = path[path.length - 1];
+      group.appendChild(legend);
+      value.forEach((item, index) => renderPrimitiveControl(group, `Item ${index + 1}`, item, [...path, index], { disabled: item === null }));
+      container.appendChild(group);
       return;
     }
-    if (item && typeof item === 'object') {
-      Object.entries(item).forEach(([key, child]) => checkArrays(child, false, `${path}.${key}`));
+    renderStructuredJson(container, path, value);
+    return;
+  }
+
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value);
+    if (depth >= 2 || entries.length > 24) {
+      renderStructuredJson(container, path, value);
+      return;
     }
-  };
-  checkArrays(value);
-  if (immutableSourceRecordId) value.sourceRecordId = immutableSourceRecordId;
-  return value;
+    const group = document.createElement('fieldset');
+    group.className = 'dataset-edit-group';
+    const legend = document.createElement('legend');
+    legend.textContent = path.length ? path[path.length - 1] : 'Fields';
+    group.appendChild(legend);
+    entries.forEach(([key, child]) => {
+      if (key === 'id' || key === 'sourceRecordId') return;
+      renderStructuredFields(group, child, [...path, key], depth + 1);
+    });
+    container.appendChild(group);
+    return;
+  }
+
+  renderPrimitiveControl(container, path[path.length - 1] || 'Value', value, path, { disabled: value === null });
+}
+
+function renderStructuredJson(container, path, value) {
+  const label = document.createElement('label');
+  label.className = 'dataset-edit-field dataset-edit-complex';
+  const caption = document.createElement('span');
+  caption.textContent = `${path[path.length - 1]} (structured; field layout is locked)`;
+  const input = document.createElement('textarea');
+  input.value = JSON.stringify(value, null, 2);
+  input.spellcheck = false;
+  input.dataset.editPath = JSON.stringify(path);
+  input.dataset.valueType = 'json';
+  label.append(caption, input);
+  container.appendChild(label);
+}
+
+function renderRecordForm(container, record) {
+  container.replaceChildren();
+  Object.entries(record).forEach(([key, value]) => {
+    if (key === 'id' || key === 'sourceRecordId') return;
+    renderStructuredFields(container, value, [key]);
+  });
+}
+
+function hasSameShape(original, edited, path = 'record') {
+  if (Array.isArray(original)) {
+    return Array.isArray(edited)
+      && original.length === edited.length
+      && original.every((value, index) => hasSameShape(value, edited[index], `${path}[${index}]`));
+  }
+  if (original && typeof original === 'object') {
+    if (!edited || typeof edited !== 'object' || Array.isArray(edited)) return false;
+    const originalKeys = Object.keys(original).sort();
+    const editedKeys = Object.keys(edited).sort();
+    return originalKeys.length === editedKeys.length
+      && originalKeys.every((key, index) => key === editedKeys[index] && hasSameShape(original[key], edited[key], `${path}.${key}`));
+  }
+  return original === null ? edited === null : typeof original === typeof edited;
+}
+
+function readStructuredForm(container, original) {
+  const immutableSourceRecordId = original.sourceRecordId || '';
+  const editableOriginal = cloneRecord(original);
+  delete editableOriginal.id;
+  delete editableOriginal.sourceRecordId;
+  const updated = cloneRecord(editableOriginal);
+  container.querySelectorAll('[data-edit-path]').forEach((input) => {
+    if (input.disabled) return;
+    const path = JSON.parse(input.dataset.editPath);
+    const type = input.dataset.valueType;
+    let value;
+    if (type === 'boolean') value = input.checked;
+    else if (type === 'number') {
+      value = Number(input.value);
+      if (!Number.isFinite(value)) throw new Error(`${path.join('.')} must be a valid number.`);
+    } else if (type === 'json') {
+      try {
+        value = JSON.parse(input.value);
+      } catch {
+        throw new Error(`${path.join('.')} must contain valid JSON.`);
+      }
+    } else value = input.value;
+    setAtPath(updated, path, value);
+  });
+  if (!hasSameShape(editableOriginal, updated)) {
+    throw new Error('The record structure changed. Field names, types, and list lengths are locked to protect the dataset schema.');
+  }
+  if (immutableSourceRecordId) updated.sourceRecordId = immutableSourceRecordId;
+  return updated;
 }
 
 function setEditorMode(editor, detailPanel, editButton, saveButton, cancelButton, editing) {
@@ -218,9 +339,10 @@ function renderRows() {
       row.setAttribute('aria-selected', 'true');
       selectedCompositionRecordId = record.id;
       selectedCompositionSourceRecordId = record.sourceRecordId || '';
+      selectedCompositionOriginal = cloneRecord(record);
       compositionRecordIdentity.textContent = `Document ID: ${record.id}${selectedCompositionSourceRecordId ? ` · Source ID: ${selectedCompositionSourceRecordId}` : ''}`;
       editCompositionButton.disabled = false;
-      compositionEditor.value = toEditableJson(record);
+      renderRecordForm(compositionEditor, record);
       setEditorMode(compositionEditor, detail, editCompositionButton, saveCompositionButton, cancelCompositionButton, false);
       detail.textContent = JSON.stringify(record, null, 2);
     };
@@ -254,6 +376,7 @@ async function loadDataset(datasetId) {
   searchInput.value = '';
   selectedCompositionRecordId = '';
   selectedCompositionSourceRecordId = '';
+  selectedCompositionOriginal = null;
   compositionRecordIdentity.textContent = 'No record selected.';
   editCompositionButton.disabled = true;
   setEditorMode(compositionEditor, detail, editCompositionButton, saveCompositionButton, cancelCompositionButton, false);
@@ -312,10 +435,11 @@ function renderSourceRows() {
       body.querySelectorAll('tr').forEach((otherRow) => otherRow.setAttribute('aria-selected', 'false'));
       row.setAttribute('aria-selected', 'true');
       selectedSourceDocument = recordDocument;
+      selectedSourceOriginal = cloneRecord(record);
       const sourceRecord = { id: recordDocument.id, ...record };
       sourceRecordIdentity.textContent = `Document ID: ${recordDocument.id} · Source ID: ${record.sourceRecordId || 'not recorded'}`;
       editSourceButton.disabled = false;
-      sourceEditor.value = toEditableJson(sourceRecord);
+      renderRecordForm(sourceEditor, sourceRecord);
       setEditorMode(sourceEditor, sourceDetail, editSourceButton, saveSourceButton, cancelSourceButton, false);
       sourceDetail.textContent = JSON.stringify(sourceRecord, null, 2);
     };
@@ -343,6 +467,7 @@ async function loadSourcePage({ reset = false } = {}) {
     sourcePageCursors = [null];
   }
   selectedSourceDocument = null;
+  selectedSourceOriginal = null;
   sourceRecordIdentity.textContent = 'No record selected.';
   editSourceButton.disabled = true;
   setEditorMode(sourceEditor, sourceDetail, editSourceButton, saveSourceButton, cancelSourceButton, false);
@@ -454,13 +579,12 @@ nextButton.addEventListener('click', () => { currentPage += 1; renderRows(); });
 editCompositionButton.addEventListener('click', () => {
   if (!selectedCompositionRecordId) return;
   setEditorMode(compositionEditor, detail, editCompositionButton, saveCompositionButton, cancelCompositionButton, true);
-  compositionEditor.focus();
+  compositionEditor.querySelector('input:not(:disabled), textarea:not(:disabled)')?.focus();
 });
 cancelCompositionButton.addEventListener('click', () => {
-  const record = records.find((item) => item.id === selectedCompositionRecordId);
-  if (record) {
-    compositionEditor.value = toEditableJson(record);
-    detail.textContent = JSON.stringify(record, null, 2);
+  if (selectedCompositionOriginal) {
+    renderRecordForm(compositionEditor, selectedCompositionOriginal);
+    detail.textContent = JSON.stringify(selectedCompositionOriginal, null, 2);
   }
   setEditorMode(compositionEditor, detail, editCompositionButton, saveCompositionButton, cancelCompositionButton, false);
 });
@@ -471,7 +595,7 @@ saveCompositionButton.addEventListener('click', async () => {
     await requireAdminForEdit();
     const recordId = selectedCompositionRecordId;
     const datasetId = currentManifest.datasetId;
-    const update = parseEditableRecord(compositionEditor.value, selectedCompositionSourceRecordId);
+    const update = readStructuredForm(compositionEditor, selectedCompositionOriginal);
     await setDoc(doc(db, 'compositionDatasets', datasetId, 'records', recordId), update);
     await loadDataset(datasetId);
     setStatus(`Saved record ${recordId}; its document ID was preserved.`);
@@ -485,12 +609,12 @@ saveCompositionButton.addEventListener('click', async () => {
 editSourceButton.addEventListener('click', () => {
   if (!selectedSourceDocument) return;
   setEditorMode(sourceEditor, sourceDetail, editSourceButton, saveSourceButton, cancelSourceButton, true);
-  sourceEditor.focus();
+  sourceEditor.querySelector('input:not(:disabled), textarea:not(:disabled)')?.focus();
 });
 cancelSourceButton.addEventListener('click', () => {
-  if (selectedSourceDocument) {
-    const record = { id: selectedSourceDocument.id, ...selectedSourceDocument.data() };
-    sourceEditor.value = toEditableJson(record);
+  if (selectedSourceDocument && selectedSourceOriginal) {
+    const record = { id: selectedSourceDocument.id, ...selectedSourceOriginal };
+    renderRecordForm(sourceEditor, record);
     sourceDetail.textContent = JSON.stringify(record, null, 2);
   }
   setEditorMode(sourceEditor, sourceDetail, editSourceButton, saveSourceButton, cancelSourceButton, false);
@@ -500,8 +624,7 @@ saveSourceButton.addEventListener('click', async () => {
   saveSourceButton.disabled = true;
   try {
     await requireAdminForEdit();
-    const originalSourceId = selectedSourceDocument.data().sourceRecordId || '';
-    const update = parseEditableRecord(sourceEditor.value, originalSourceId);
+    const update = readStructuredForm(sourceEditor, selectedSourceOriginal);
     await setDoc(selectedSourceDocument.ref, update);
     const recordId = selectedSourceDocument.id;
     await loadSourcePage();
