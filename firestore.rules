@@ -23,6 +23,16 @@ service cloud.firestore {
         allow read: if resource.data.requiresLogin != true || signedIn() || isAdmin();
         allow create, update, delete: if isAdmin();
       }
+
+      match /practiceLoops/{loopId} {
+        allow read: if isAdmin() || (
+          get(/databases/$(database)/documents/raags/$(raagId)).data.isPublished == true
+          && resource.data.isPublished == true
+          && (resource.data.accessLevel == 'public'
+            || (resource.data.accessLevel == 'signed-in' && signedIn()))
+        );
+        allow create, update, delete: if isAdmin();
+      }
     }
 
     match /raagSourceRecords/{recordId} {

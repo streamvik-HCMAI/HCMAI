@@ -281,7 +281,7 @@ h1, h2, h3, h4, p {
   position: relative;
   min-height: 300px;
   display: grid;
-  place-items: center;
+  place-items: center stretch;
 }
 
 .visual-card {
@@ -1810,6 +1810,63 @@ input[type="range"] {
   border-radius: 8px;
 }
 
+.raag-practice-loop-form {
+  padding: 14px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.practice-loop-time-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.practice-loop-list {
+  display: grid;
+  gap: 10px;
+}
+
+.practice-loop-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+}
+
+.practice-loop-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.practice-loop-copy strong {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.practice-loop-copy span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.practice-loop-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.practice-loop-status-draft {
+  color: #9a5800 !important;
+  font-weight: 700;
+}
+
 .raag-edit-group {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1882,6 +1939,20 @@ input[type="range"] {
 
   .raag-edit-group {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .practice-loop-time-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .practice-loop-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .practice-loop-actions {
+    width: 100%;
+    flex-wrap: wrap;
   }
 }
 
@@ -2332,25 +2403,72 @@ input[type="range"] {
 }
 
 .home-time-note {
-  margin: 14px 0 0;
-  color: var(--muted);
+  margin: 0 0 12px;
+  color: rgba(255, 255, 255, 0.78);
   font-size: 0.78rem;
   line-height: 1.5;
 }
 
+.home-recommendations-card {
+  width: min(100%, 460px);
+  padding: 20px;
+}
+
+.home-recommendations-card .eyebrow {
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.home-recommendations-title {
+  margin: 0 0 12px;
+  color: #fff;
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+
 .home-prahar-title {
-  color: var(--muted);
-  font-size: 0.76em;
-  font-weight: 600;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.78em;
+  font-weight: 500;
+}
+
+.home-prahar-status {
+  min-height: 1.4em;
+  margin: 0 0 10px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.82rem;
+}
+
+.home-recommendations-card .list-compact {
+  gap: 8px;
+}
+
+.home-recommendations-card .mini-card {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.home-recommendations-card .mini-card strong {
+  color: var(--text);
+}
+
+.home-recommendations-link {
+  display: inline-flex;
+  margin-top: 12px;
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: underline;
 }
 
 .bottom-nav {
+  display: none;
   position: fixed;
   left: 12px;
   right: 12px;
   bottom: max(12px, env(safe-area-inset-bottom));
   z-index: 90;
-  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 4px;
@@ -2448,6 +2566,10 @@ input[type="range"] {
 }
 
 @media (max-width: 699px) {
+  .bottom-nav {
+    display: flex;
+  }
+
   .topbar {
     position: sticky;
   }

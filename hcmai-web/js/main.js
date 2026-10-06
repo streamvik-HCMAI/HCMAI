@@ -106,6 +106,7 @@ if (
   const savedLoopsStoragePrefix = 'hcmai.practice.saved-youtube-loops.v2:';
   const legacySavedLoopsStorageKey = 'hcmai.practice.saved-youtube-loops.v1';
   let savedLoopsStorageKey = `${savedLoopsStoragePrefix}guest`;
+  let savedLoopsOwnerInitialized = false;
 
   const setClipStatus = (message) => {
     clipStatus.textContent = message;
@@ -229,7 +230,10 @@ if (
   const switchSavedLoopOwner = (uid) => {
     const ownerKey = uid || 'guest';
     const nextStorageKey = `${savedLoopsStoragePrefix}${ownerKey}`;
-    if (nextStorageKey === savedLoopsStorageKey) return;
+    if (nextStorageKey === savedLoopsStorageKey) {
+      savedLoopsOwnerInitialized = true;
+      return;
+    }
 
     if (uid) {
       try {
@@ -243,7 +247,7 @@ if (
       }
     }
 
-    if (activeClipSource === 'youtube') {
+    if (savedLoopsOwnerInitialized && !savedLoopsStorageKey.endsWith(':guest') && activeClipSource === 'youtube') {
       stopClipPlayback();
       youtubePlayer?.stopVideo?.();
       activeClipSource = '';
@@ -256,6 +260,7 @@ if (
     savedClipName.value = '';
     youtubeSavedControls.hidden = true;
     savedLoopsStorageKey = nextStorageKey;
+    savedLoopsOwnerInitialized = true;
     savedYouTubeLoops = readSavedYouTubeLoops();
     renderSavedYouTubeLoops();
   };
@@ -665,6 +670,20 @@ if (
       youtubePlayer.playVideo();
     }
   });
+
+  const practiceParams = new URLSearchParams(window.location.search);
+  const requestedVideoId = practiceParams.get('video') || '';
+  const requestedStart = Number(practiceParams.get('start'));
+  const requestedEnd = Number(practiceParams.get('end'));
+  if (/^[\w-]{11}$/.test(requestedVideoId)
+    && Number.isSafeInteger(requestedStart)
+    && Number.isSafeInteger(requestedEnd)
+    && requestedStart >= 0
+    && requestedEnd > requestedStart) {
+    clipVideoUrl.value = `https://www.youtube.com/watch?v=${requestedVideoId}`;
+    savedClipName.value = practiceParams.get('title') || '';
+    loadYouTubeClip(requestedVideoId, { startSeconds: requestedStart, endSeconds: requestedEnd });
+  }
 }
 
 const timerToggle = document.getElementById('timerToggle');

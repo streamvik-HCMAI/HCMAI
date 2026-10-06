@@ -2,9 +2,6 @@ import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.2.1/fi
 import { auth } from './auth.js';
 import { fetchAccessibleRaags } from './raag-data.js';
 
-const localTime = document.getElementById('homeLocalTime');
-const timeZone = document.getElementById('homeTimeZone');
-const praharLabel = document.getElementById('homePraharLabel');
 const currentPraharTitle = document.getElementById('homeCurrentPrahar');
 const status = document.getElementById('homePraharStatus');
 const recommendationList = document.getElementById('homePraharRecommendations');
@@ -23,9 +20,7 @@ function getPraharContext(date = new Date()) {
     clock.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
     return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(clock);
   };
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local timezone';
-  const time = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(date);
-  return { number, label: `${ordinalNames[number - 1]} Prahar`, range: `${formatClock(startMinutes)}–${formatClock(endMinutes)}`, zone, time };
+  return { number, label: `${ordinalNames[number - 1]} Prahar`, range: `${formatClock(startMinutes)}–${formatClock(endMinutes)}` };
 }
 
 function getRaagPrahars(raag) {
@@ -37,16 +32,17 @@ function getRaagPrahars(raag) {
   return { numbers, allTimes: /sarva[- ]kaaleen|all[- ]day|all times|universal/.test(timeText) };
 }
 
+function updateCurrentPraharTitle(context = getPraharContext()) {
+  currentPraharTitle.textContent = `· ${context.label} · ${context.range}`;
+}
+
 function openRaagHref(raag) {
   return `raag-explorer.html?search=${encodeURIComponent(raag.name || '')}`;
 }
 
 function renderRecommendations() {
   const context = getPraharContext();
-  localTime.textContent = context.time;
-  timeZone.textContent = context.zone;
-  praharLabel.textContent = `${context.label} · ${context.range}`;
-  currentPraharTitle.textContent = context.label;
+  currentPraharTitle.textContent = `· ${context.label} · ${context.range}`;
   recommendationList.replaceChildren();
 
   const praharMatches = accessibleRaags.filter((raag) => getRaagPrahars(raag).numbers.has(context.number));
@@ -63,8 +59,9 @@ function renderRecommendations() {
     praharMatches.length ? `${praharMatches.length} for ${context.label}` : '',
     allTimeMatches.length ? `${allTimeMatches.length} all-time` : ''
   ].filter(Boolean).join(' · ');
-  status.textContent = `${recommendationSummary} Raag recommendations in ${context.zone}.`;
-  matches.forEach((raag) => {
+  const visibleMatches = matches.slice(0, 3);
+  status.textContent = `${recommendationSummary} Raag recommendations${matches.length > visibleMatches.length ? ` · Showing ${visibleMatches.length} of ${matches.length}` : ''}.`;
+  visibleMatches.forEach((raag) => {
     const item = document.createElement('article');
     item.className = 'mini-card';
     const copy = document.createElement('div');
@@ -83,6 +80,8 @@ function renderRecommendations() {
     recommendationList.appendChild(item);
   });
 }
+
+updateCurrentPraharTitle();
 
 onAuthStateChanged(auth, async (user) => {
   try {

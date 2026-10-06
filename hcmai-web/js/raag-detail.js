@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, getDoc, getDocs, getFirestore, orderBy, query, updateDoc } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, orderBy, query, serverTimestamp, updateDoc, where } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 import { getBlob, getStorage, ref, uploadBytes } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import { auth } from './auth.js';
@@ -20,6 +20,11 @@ const topicsList = document.getElementById('raagTopicsList');
 const addTopicButton = document.getElementById('addRaagTopic');
 const topicForm = document.getElementById('raagTopicForm');
 const cancelTopicButton = document.getElementById('cancelRaagTopic');
+const practiceLoopsStatus = document.getElementById('raagPracticeLoopsStatus');
+const practiceLoopsList = document.getElementById('raagPracticeLoopsList');
+const addPracticeLoopButton = document.getElementById('addRaagPracticeLoop');
+const practiceLoopForm = document.getElementById('raagPracticeLoopForm');
+const cancelPracticeLoopButton = document.getElementById('cancelRaagPracticeLoop');
 const editButton = document.getElementById('editRaagDetails');
 const saveButton = document.getElementById('saveRaagDraft');
 const publishButton = document.getElementById('publishRaag');
@@ -28,6 +33,7 @@ const cancelButton = document.getElementById('cancelRaagEdit');
 let record = null;
 let isAdmin = false;
 let isEditing = false;
+let currentUser = null;
 
 const fieldGroups = [
   {
@@ -278,6 +284,7 @@ function renderPage() {
   content.hidden = false;
   pageStatus.hidden = true;
   loadTopics();
+  loadPracticeLoops(currentUser);
 }
 
 async function loadTopics() {
@@ -316,6 +323,234 @@ async function loadTopics() {
   }
 }
 
+function parseLoopTime(value) {
+  const parts = String(value || '').trim().split(':');
+  if (parts.length < 2 || parts.length > 3 || parts.some((part) => !/^\d+$/.test(part))) return null;
+  const values = parts.map(Number);
+  const seconds = values[values.length - 1];
+  const minutes = values[values.length - 2];
+  if (seconds >= 60 || (values.length === 3 && minutes >= 60)) return null;
+  return values.length === 3 ? values[0] * 3600 + minutes * 60 + seconds : minutes * 60 + seconds;
+}
+
+function formatLoopTime(seconds) {
+  const wholeSeconds = Math.floor(seconds);
+  const hours = Math.floor(wholeSeconds / 3600);
+  const minutes = Math.floor(wholeSeconds / 60) % 60;
+  const remainder = wholeSeconds % 60;
+  if (hours > 0) return `${hours}:${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
+  return `${Math.floor(wholeSeconds / 60)}:${String(remainder).padStart(2, '0')}`;
+}
+
+function parseYouTubeVideoId(value) {
+  try {
+    const url = new URL(value.trim());
+    const host = url.hostname.toLowerCase().replace(/^www\./, '');
+    let videoId = null;
+    if (host === 'youtu.be') videoId = url.pathname.split('/').filter(Boolean)[0];
+    else if (['youtube.com', 'm.youtube.com', 'music.youtube.com'].includes(host)) {
+      videoId = url.pathname === '/watch'
+        ? url.searchParams.get('v')
+        : url.pathname.match(/^\/(?:embed|shorts|live)\/([^/]+)/)?.[1];
+    }
+    return videoId && /^[\w-]{11}$/.test(videoId) ? videoId : null;
+  } catch {
+    return null;
+  }
+}
+
+function openPracticeLoopForm(loop = null) {
+  practiceLoopForm.reset();
+  practiceLoopForm.elements.loopId.value = loop?.id || '';
+  practiceLoopForm.elements.title.value = loop?.title || '';
+  practiceLoopForm.elements.videoUrl.value = loop?.videoId
+    ? `https://www.youtube.com/watch?v=${loop.videoId}`
+    : '';
+  practiceLoopForm.elements.startTime.value = loop ? formatLoopTime(loop.startSeconds) : '';
+  practiceLoopForm.elements.endTime.value = loop ? formatLoopTime(loop.endSeconds) : '';
+  practiceLoopForm.elements.accessLevel.value = loop?.accessLevel || 'public';
+  practiceLoopForm.elements.isPublished.checked = loop?.isPublished === true;
+  practiceLoopForm.hidden = false;
+  practiceLoopForm.elements.title.focus();
+}
+
+function renderPracticeLoops(loops) {
+  practiceLoopsList.replaceChildren();
+  if (!loops.length) {
+    practiceLoopsStatus.textContent = isAdmin
+      ? 'No practice phrases for this Raag yet.'
+      : 'No published practice phrases are available for this Raag.';
+    return;
+  }
+
+  practiceLoopsStatus.textContent = `${loops.length} practice ${loops.length === 1 ? 'phrase' : 'phrases'}`;
+  loops.forEach((loop) => {
+    const row = document.createElement('article');
+    row.className = 'practice-loop-row';
+    const copy = document.createElement('div');
+    copy.className = 'practice-loop-copy';
+    const title = document.createElement('strong');
+    title.textContent = loop.title;
+    const description = document.createElement('span');
+    description.textContent = `YouTube · ${formatLoopTime(loop.startSeconds)}–${formatLoopTime(loop.endSeconds)}`;
+    copy.append(title, description);
+
+    const actions = document.createElement('div');
+    actions.className = 'practice-loop-actions';
+    if (isAdmin) {
+      const statusBadge = document.createElement('span');
+      statusBadge.className = loop.isPublished ? '' : 'practice-loop-status-draft';
+      statusBadge.textContent = loop.isPublished
+        ? (loop.accessLevel === 'signed-in' ? 'Published · Sign-in required' : 'Published · Public')
+        : 'Draft · Admin only';
+      actions.appendChild(statusBadge);
+    }
+
+    const practiceLink = document.createElement('a');
+    practiceLink.className = 'primary-btn small';
+    practiceLink.href = buildPracticeLoopUrl(loop);
+    practiceLink.textContent = 'Practice phrase';
+    actions.appendChild(practiceLink);
+
+    if (isAdmin) {
+      const editButton = document.createElement('button');
+      editButton.className = 'secondary-btn small';
+      editButton.type = 'button';
+      editButton.textContent = 'Edit';
+      editButton.addEventListener('click', () => openPracticeLoopForm(loop));
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'secondary-btn small';
+      deleteButton.type = 'button';
+      deleteButton.textContent = 'Delete';
+      deleteButton.addEventListener('click', () => deletePracticeLoop(loop));
+      actions.append(editButton, deleteButton);
+    }
+
+    row.append(copy, actions);
+    practiceLoopsList.appendChild(row);
+  });
+}
+
+function buildPracticeLoopUrl(loop) {
+  const url = new URL('practice.html', window.location.href);
+  url.searchParams.set('video', loop.videoId);
+  url.searchParams.set('start', String(loop.startSeconds));
+  url.searchParams.set('end', String(loop.endSeconds));
+  url.searchParams.set('title', loop.title);
+  return `${url.pathname}${url.search}`;
+}
+
+async function loadPracticeLoops(user = auth.currentUser) {
+  if (!recordId || !record || !practiceLoopsList) return;
+  practiceLoopsStatus.textContent = 'Loading practice phrases...';
+  try {
+    const loopCollection = collection(db, 'raags', recordId, 'practiceLoops');
+    let loops = [];
+    if (isAdmin) {
+      const snapshot = await getDocs(loopCollection);
+      loops = snapshot.docs.map((loopDoc) => ({ id: loopDoc.id, ...loopDoc.data() }));
+    } else {
+      const accessLevels = user ? ['public', 'signed-in'] : ['public'];
+      const snapshots = await Promise.all(accessLevels.map((accessLevel) => getDocs(query(
+        loopCollection,
+        where('isPublished', '==', true),
+        where('accessLevel', '==', accessLevel)
+      ))));
+      loops = snapshots.flatMap((snapshot) => snapshot.docs.map((loopDoc) => ({ id: loopDoc.id, ...loopDoc.data() })));
+    }
+    loops.sort((left, right) => String(left.title || '').localeCompare(String(right.title || '')));
+    renderPracticeLoops(loops);
+  } catch (error) {
+    practiceLoopsStatus.textContent = 'Practice phrases could not be loaded.';
+    console.error('Unable to load Raag practice phrases.', error);
+  }
+}
+
+async function deletePracticeLoop(loop) {
+  const user = auth.currentUser;
+  if (!isAdmin || !user || (await user.getIdTokenResult(true)).claims.admin !== true) {
+    practiceLoopsStatus.textContent = 'Administrator permission is required to delete practice phrases.';
+    return;
+  }
+  if (!window.confirm(`Delete the practice phrase "${loop.title}"?`)) return;
+  try {
+    await deleteDoc(doc(db, 'raags', recordId, 'practiceLoops', loop.id));
+    practiceLoopsStatus.textContent = 'Practice phrase deleted.';
+    await loadPracticeLoops(user);
+  } catch (error) {
+    practiceLoopsStatus.textContent = error.message || 'Practice phrase could not be deleted.';
+  }
+}
+
+addPracticeLoopButton.addEventListener('click', () => openPracticeLoopForm());
+cancelPracticeLoopButton.addEventListener('click', () => {
+  practiceLoopForm.reset();
+  practiceLoopForm.hidden = true;
+});
+practiceLoopForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const user = auth.currentUser;
+  if (!isAdmin || !user || (await user.getIdTokenResult(true)).claims.admin !== true) {
+    practiceLoopsStatus.textContent = 'Administrator permission is required to manage practice phrases.';
+    return;
+  }
+
+  const formData = new FormData(practiceLoopForm);
+  const title = String(formData.get('title') || '').trim();
+  const videoId = parseYouTubeVideoId(String(formData.get('videoUrl') || ''));
+  const startSeconds = parseLoopTime(String(formData.get('startTime') || ''));
+  const endSeconds = parseLoopTime(String(formData.get('endTime') || ''));
+  const accessLevel = String(formData.get('accessLevel') || '');
+  const loopId = String(formData.get('loopId') || '');
+  if (!title || title.length > 80) {
+    practiceLoopsStatus.textContent = 'Enter a phrase name up to 80 characters.';
+    return;
+  }
+  if (!videoId) {
+    practiceLoopsStatus.textContent = 'Enter a valid YouTube video link.';
+    return;
+  }
+  if (startSeconds === null || endSeconds === null || endSeconds <= startSeconds) {
+    practiceLoopsStatus.textContent = 'Enter valid timestamps, with the end after the start.';
+    return;
+  }
+  if (!['public', 'signed-in'].includes(accessLevel)) {
+    practiceLoopsStatus.textContent = 'Choose a valid access level.';
+    return;
+  }
+
+  const submitButton = practiceLoopForm.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  const loopData = {
+    title,
+    videoId,
+    startSeconds,
+    endSeconds,
+    accessLevel,
+    isPublished: formData.get('isPublished') === 'on',
+    updatedAt: serverTimestamp()
+  };
+  try {
+    if (loopId) {
+      await updateDoc(doc(db, 'raags', recordId, 'practiceLoops', loopId), loopData);
+    } else {
+      await addDoc(collection(db, 'raags', recordId, 'practiceLoops'), {
+        ...loopData,
+        createdBy: user.uid,
+        createdAt: serverTimestamp()
+      });
+    }
+    practiceLoopForm.reset();
+    practiceLoopForm.hidden = true;
+    practiceLoopsStatus.textContent = loopId ? 'Practice phrase updated.' : 'Practice phrase added.';
+    await loadPracticeLoops(user);
+  } catch (error) {
+    practiceLoopsStatus.textContent = error.message || 'Practice phrase could not be saved.';
+  } finally {
+    submitButton.disabled = false;
+  }
+});
+
 async function playTopicAudio(button, audioPath) {
   button.disabled = true;
   button.textContent = 'Loading...';
@@ -353,6 +588,7 @@ async function initialize(user) {
     return;
   }
   try {
+    currentUser = user;
     isAdmin = Boolean(user && (await user.getIdTokenResult()).claims.admin === true);
     const snapshot = await getDoc(doc(db, 'raags', recordId));
     if (!snapshot.exists()) {

@@ -20,7 +20,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css/styles.css?v=20261006-raagedit" />
+    <link rel="stylesheet" href="css/styles.css?v=20261006-homeprahar-v3" />
   </head>
   <body data-page="home">
     <header class="topbar">
@@ -77,31 +77,16 @@
         </div>
 
         <div class="hero-visual">
-          <div class="visual-card featured-card">
-            <div class="card-topline">Your local time</div>
-            <h3 id="homeLocalTime">Checking local time…</h3>
-            <p id="homeTimeZone">Using this device’s timezone.</p>
-            <div class="chip-row">
-              <span id="homePraharLabel" class="chip accent">Finding current Prahar</span>
-            </div>
-          </div>
-
-          <div class="pulse-orb"></div>
-        </div>
-      </section>
-
-      <section class="content-grid">
-        <div class="section-surface">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">Recommended now</p>
-              <h2>Practice for this time of day <span class="home-prahar-title">· <span id="homeCurrentPrahar">Checking local Prahar…</span></span></h2>
-              <p class="home-time-note">Prahar is estimated from your device’s local clock in fixed three-hour blocks starting at 6:00 AM; traditional boundaries can vary by location, season, and source.</p>
-            </div>
-            <a href="raag-explorer.html" class="text-link">Explore all</a>
-          </div>
-          <p id="homePraharStatus" class="raag-status" role="status" aria-live="polite">Finding Raags for your current local Prahar…</p>
-          <div id="homePraharRecommendations" class="list-compact"></div>
+          <section class="visual-card home-recommendations-card" aria-labelledby="homePraharHeading">
+            <p class="eyebrow">Recommended now</p>
+            <h2 id="homePraharHeading" class="home-recommendations-title">
+              Practice for this time of day <span id="homeCurrentPrahar" class="home-prahar-title">· Finding current Prahar</span>
+            </h2>
+            <p class="home-time-note">Prahar is estimated from your device’s local clock in fixed three-hour blocks starting at 6:00 AM; traditional boundaries can vary by location, season, and source.</p>
+            <p id="homePraharStatus" class="home-prahar-status" role="status" aria-live="polite">Finding Raags for your current local Prahar…</p>
+            <div id="homePraharRecommendations" class="list-compact"></div>
+            <a href="raag-explorer.html" class="home-recommendations-link">Explore all Raags</a>
+          </section>
         </div>
       </section>
 
@@ -193,6 +178,6 @@
 
     <script src="js/main.js"></script>
     <script type="module" src="js/auth.js"></script>
-    <script type="module" src="js/home.js?v=20261005-v3"></script>
+    <script type="module" src="js/home.js?v=20261006-homeprahar-v4"></script>
   </body>
 </html>
