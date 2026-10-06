@@ -371,6 +371,9 @@ onAuthStateChanged(auth, async (user) => {
     isAuthenticated: Boolean(user),
     isAdmin
   });
+  window.dispatchEvent(new CustomEvent('hcmai-auth-state-changed', {
+    detail: { uid: user?.uid || null }
+  }));
 });
 
 export { auth };

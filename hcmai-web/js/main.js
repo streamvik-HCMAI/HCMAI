@@ -103,7 +103,9 @@ if (
   let savedYouTubeLoops = [];
   let localClipObjectUrl = null;
   let clipClockInterval = null;
-  const savedLoopsStorageKey = 'hcmai.practice.saved-youtube-loops.v1';
+  const savedLoopsStoragePrefix = 'hcmai.practice.saved-youtube-loops.v2:';
+  const legacySavedLoopsStorageKey = 'hcmai.practice.saved-youtube-loops.v1';
+  let savedLoopsStorageKey = `${savedLoopsStoragePrefix}guest`;
 
   const setClipStatus = (message) => {
     clipStatus.textContent = message;
@@ -155,9 +157,9 @@ if (
     return minutes * 60 + seconds;
   };
 
-  const readSavedYouTubeLoops = () => {
+  const readSavedYouTubeLoops = (storageKey = savedLoopsStorageKey) => {
     try {
-      const storedLoops = JSON.parse(window.localStorage.getItem(savedLoopsStorageKey) || '[]');
+      const storedLoops = JSON.parse(window.localStorage.getItem(storageKey) || '[]');
       if (!Array.isArray(storedLoops)) return [];
       return storedLoops.filter((loop) => loop
         && typeof loop.id === 'string'
@@ -222,6 +224,40 @@ if (
       item.append(details, actions);
       savedYouTubeLoopsList.append(item);
     });
+  };
+
+  const switchSavedLoopOwner = (uid) => {
+    const ownerKey = uid || 'guest';
+    const nextStorageKey = `${savedLoopsStoragePrefix}${ownerKey}`;
+    if (nextStorageKey === savedLoopsStorageKey) return;
+
+    if (uid) {
+      try {
+        const legacyLoops = window.localStorage.getItem(legacySavedLoopsStorageKey);
+        if (legacyLoops && !window.localStorage.getItem(nextStorageKey)) {
+          window.localStorage.setItem(nextStorageKey, legacyLoops);
+        }
+        if (legacyLoops) window.localStorage.removeItem(legacySavedLoopsStorageKey);
+      } catch {
+        setClipStatus('Older saved loops could not be moved into this account in this browser.');
+      }
+    }
+
+    if (activeClipSource === 'youtube') {
+      stopClipPlayback();
+      youtubePlayer?.stopVideo?.();
+      activeClipSource = '';
+      currentVideoId = '';
+      clipWorkspace.hidden = true;
+      clipFallbackLink.hidden = true;
+      clipVideoUrl.value = '';
+    }
+    selectedSavedLoopId = '';
+    savedClipName.value = '';
+    youtubeSavedControls.hidden = true;
+    savedLoopsStorageKey = nextStorageKey;
+    savedYouTubeLoops = readSavedYouTubeLoops();
+    renderSavedYouTubeLoops();
   };
 
   const getClipDuration = () => activeClipSource === 'audio'
@@ -585,6 +621,9 @@ if (
   });
 
   [clipStartTime, clipEndTime].forEach((input) => input.addEventListener('input', updateSaveYouTubeLoopButton));
+  window.addEventListener('hcmai-auth-state-changed', (event) => {
+    switchSavedLoopOwner(event.detail?.uid || null);
+  });
   renderSavedYouTubeLoops();
 
   markClipStart.addEventListener('click', () => {
