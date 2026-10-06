@@ -78,12 +78,11 @@
 
         <div class="hero-visual">
           <div class="visual-card featured-card">
-            <div class="card-topline">Today’s Tip</div>
-            <h3>Bhairav</h3>
-            <p>Ideal for early morning practice and emotional expression.</p>
+            <div class="card-topline">Your local time</div>
+            <h3 id="homeLocalTime">Checking local time…</h3>
+            <p id="homeTimeZone">Using this device’s timezone.</p>
             <div class="chip-row">
-              <span class="chip neutral">Morning</span>
-              <span class="chip accent">1st Prahar</span>
+              <span id="homePraharLabel" class="chip accent">Finding current Prahar</span>
             </div>
           </div>
 
@@ -91,7 +90,7 @@
         </div>
       </section>
 
-      <section class="content-grid two-up">
+      <section class="content-grid">
         <div class="section-surface">
           <div class="section-head">
             <div>
@@ -100,63 +99,9 @@
             </div>
             <a href="raag-explorer.html" class="text-link">Explore all</a>
           </div>
-
-          <div class="list-compact">
-            <div class="mini-card">
-              <div>
-                <strong>1st Prahar</strong>
-                <span>6:00 AM – 9:00 AM</span>
-              </div>
-              <button class="chip accent">Bhairav</button>
-            </div>
-            <div class="mini-card">
-              <div>
-                <strong>2nd Prahar</strong>
-                <span>9:00 AM – 12:00 PM</span>
-              </div>
-              <button class="chip neutral">Asavari</button>
-            </div>
-            <div class="mini-card">
-              <div>
-                <strong>5th Prahar</strong>
-                <span>6:00 PM – 9:00 PM</span>
-              </div>
-              <button class="chip purple">Yaman</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="section-surface">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">Learning path</p>
-              <h2>Beginner roadmap</h2>
-            </div>
-          </div>
-
-          <div class="progress-stack">
-            <div class="progress-item">
-              <div class="item-row">
-                <span>Foundations</span>
-                <span>90%</span>
-              </div>
-              <div class="progress-bar"><span style="width: 90%"></span></div>
-            </div>
-            <div class="progress-item">
-              <div class="item-row">
-                <span>Swara work</span>
-                <span>72%</span>
-              </div>
-              <div class="progress-bar"><span style="width: 72%"></span></div>
-            </div>
-            <div class="progress-item">
-              <div class="item-row">
-                <span>Raag study</span>
-                <span>54%</span>
-              </div>
-              <div class="progress-bar"><span style="width: 54%"></span></div>
-            </div>
-          </div>
+          <p id="homePraharStatus" class="raag-status" role="status" aria-live="polite">Finding Raags for your current local Prahar…</p>
+          <div id="homePraharRecommendations" class="list-compact"></div>
+          <p class="home-time-note">Prahar is estimated from your device’s local clock in fixed three-hour blocks starting at 6:00 AM; traditional boundaries can vary by location, season, and source.</p>
         </div>
       </section>
 
@@ -235,11 +180,6 @@
         <strong>HCMAI</strong>
         <span>Learn Hindustani Classical Music</span>
       </div>
-      <nav>
-        <a href="about.html">About</a>
-        <a href="lessons.html">Lessons</a>
-        <a href="practice.html">Practice</a>
-      </nav>
     </footer>
 
     <nav class="bottom-nav" aria-label="Mobile navigation">
@@ -253,5 +193,6 @@
 
     <script src="js/main.js"></script>
     <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/home.js?v=20261005-v1"></script>
   </body>
 </html>

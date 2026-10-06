@@ -158,6 +158,8 @@ async function loadRaags(user = auth.currentUser) {
     if (requestedThaat && thaatFilter && thaats.some((thaat) => thaat.toLocaleLowerCase() === requestedThaat.toLocaleLowerCase())) {
       thaatFilter.value = thaats.find((thaat) => thaat.toLocaleLowerCase() === requestedThaat.toLocaleLowerCase());
     }
+    const requestedSearch = new URLSearchParams(window.location.search).get('search');
+    if (requestedSearch && searchInput) searchInput.value = requestedSearch;
     filterRaags();
   } catch (error) {
     allRaags = [];
