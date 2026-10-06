@@ -20,7 +20,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/styles.css?v=20261006-homeprahar-v3" />
   </head>
   <body data-page="home">
     <header class="topbar">
@@ -28,7 +28,7 @@
         <div class="brand-mark">H</div>
         <div class="brand-copy">
           <span class="brand-name">HCMAI</span>
-          <span class="brand-tag">Classical Music Academy</span>
+          <span class="brand-tag">Hindustani Classical Music</span>
         </div>
       </div>
 
@@ -36,8 +36,8 @@
         <a href="index.html" class="nav-item active">Home</a>
         <a href="raag-explorer.html" class="nav-item">Raag Explorer</a>
         <a href="thaat-explorer.html" class="nav-item">Thaat Explorer</a>
-        <a href="compose.html" class="nav-item">Compose</a>
         <a href="lessons.html" class="nav-item">Lessons</a>
+        <a href="compose.html" class="nav-item">Compose</a>
         <a href="practice.html" class="nav-item">Practice</a>
         <a href="about.html" class="nav-item">About</a>
       </nav>
@@ -77,86 +77,16 @@
         </div>
 
         <div class="hero-visual">
-          <div class="visual-card featured-card">
-            <div class="card-topline">Today’s Tip</div>
-            <h3>Bhairav</h3>
-            <p>Ideal for early morning practice and emotional expression.</p>
-            <div class="chip-row">
-              <span class="chip neutral">Morning</span>
-              <span class="chip accent">1st Prahar</span>
-            </div>
-          </div>
-
-          <div class="pulse-orb"></div>
-        </div>
-      </section>
-
-      <section class="content-grid two-up">
-        <div class="section-surface">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">Recommended now</p>
-              <h2>Practice for this time of day</h2>
-            </div>
-            <a href="raag-explorer.html" class="text-link">Explore all</a>
-          </div>
-
-          <div class="list-compact">
-            <div class="mini-card">
-              <div>
-                <strong>1st Prahar</strong>
-                <span>6:00 AM – 9:00 AM</span>
-              </div>
-              <button class="chip accent">Bhairav</button>
-            </div>
-            <div class="mini-card">
-              <div>
-                <strong>2nd Prahar</strong>
-                <span>9:00 AM – 12:00 PM</span>
-              </div>
-              <button class="chip neutral">Asavari</button>
-            </div>
-            <div class="mini-card">
-              <div>
-                <strong>5th Prahar</strong>
-                <span>6:00 PM – 9:00 PM</span>
-              </div>
-              <button class="chip purple">Yaman</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="section-surface">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">Learning path</p>
-              <h2>Beginner roadmap</h2>
-            </div>
-          </div>
-
-          <div class="progress-stack">
-            <div class="progress-item">
-              <div class="item-row">
-                <span>Foundations</span>
-                <span>90%</span>
-              </div>
-              <div class="progress-bar"><span style="width: 90%"></span></div>
-            </div>
-            <div class="progress-item">
-              <div class="item-row">
-                <span>Swara work</span>
-                <span>72%</span>
-              </div>
-              <div class="progress-bar"><span style="width: 72%"></span></div>
-            </div>
-            <div class="progress-item">
-              <div class="item-row">
-                <span>Raag study</span>
-                <span>54%</span>
-              </div>
-              <div class="progress-bar"><span style="width: 54%"></span></div>
-            </div>
-          </div>
+          <section class="visual-card home-recommendations-card" aria-labelledby="homePraharHeading">
+            <p class="eyebrow">Recommended now</p>
+            <h2 id="homePraharHeading" class="home-recommendations-title">
+              Practice for this time of day <span id="homeCurrentPrahar" class="home-prahar-title">· Finding current Prahar</span>
+            </h2>
+            <p class="home-time-note">Prahar is estimated from your device’s local clock in fixed three-hour blocks starting at 6:00 AM; traditional boundaries can vary by location, season, and source.</p>
+            <p id="homePraharStatus" class="home-prahar-status" role="status" aria-live="polite">Finding Raags for your current local Prahar…</p>
+            <div id="homePraharRecommendations" class="list-compact"></div>
+            <a href="raag-explorer.html" class="home-recommendations-link">Explore all Raags</a>
+          </section>
         </div>
       </section>
 
@@ -233,13 +163,8 @@
     <footer class="site-footer">
       <div>
         <strong>HCMAI</strong>
-        <span>Hindustani Classical Music Academy</span>
+        <span>Learn Hindustani Classical Music</span>
       </div>
-      <nav>
-        <a href="about.html">About</a>
-        <a href="lessons.html">Lessons</a>
-        <a href="practice.html">Practice</a>
-      </nav>
     </footer>
 
     <nav class="bottom-nav" aria-label="Mobile navigation">
@@ -253,5 +178,6 @@
 
     <script src="js/main.js"></script>
     <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/home.js?v=20261006-homeprahar-v4"></script>
   </body>
 </html>

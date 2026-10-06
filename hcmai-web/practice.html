@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="HCMAI" />
     <title>Practice | HCMAI</title>
-    <meta name="description" content="Daily riyaz practice with a tanpura-inspired drone, note selection, and rhythm tools." />
+    <meta name="description" content="Daily riyaz practice with a tanpura drone and looping YouTube clips." />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -17,7 +17,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/styles.css?v=20261006-savedloops" />
   </head>
   <body data-page="practice">
     <header class="topbar">
@@ -25,7 +25,7 @@
         <div class="brand-mark">H</div>
         <div class="brand-copy">
           <span class="brand-name">HCMAI</span>
-          <span class="brand-tag">Classical Music Academy</span>
+          <span class="brand-tag">Hindustani Classical Music</span>
         </div>
       </div>
 
@@ -34,6 +34,7 @@
         <a href="raag-explorer.html" class="nav-item">Raag Explorer</a>
         <a href="thaat-explorer.html" class="nav-item">Thaat Explorer</a>
         <a href="lessons.html" class="nav-item">Lessons</a>
+        <a href="compose.html" class="nav-item">Compose</a>
         <a href="practice.html" class="nav-item active">Practice</a>
         <a href="about.html" class="nav-item">About</a>
       </nav>
@@ -101,29 +102,100 @@
           </div>
         </aside>
       </section>
+      <section class="clip-loop-section" aria-labelledby="clipLoopTitle">
+        <div class="section-surface clip-loop-panel">
+          <div class="clip-loop-header">
+            <p class="eyebrow">Phrase practice</p>
+            <h2 id="clipLoopTitle">Loop a YouTube clip</h2>
+          </div>
+
+          <form id="clipVideoForm" class="clip-url-form">
+            <label for="youtubeVideoUrl">YouTube video link</label>
+            <div class="clip-url-row">
+              <input
+                id="youtubeVideoUrl"
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=..."
+                autocomplete="url"
+                required
+              />
+              <button id="loadClipVideo" class="primary-btn" type="submit">Load video</button>
+            </div>
+          </form>
+          <div class="clip-audio-upload">
+            <label for="clipAudioFile">Or choose an audio file</label>
+            <input id="clipAudioFile" type="file" accept="audio/*" />
+            <p id="clipAudioFileName" class="clip-audio-file-name" aria-live="polite"></p>
+          </div>
+          <p class="clip-privacy-note">Audio files stay on this device. Saved YouTube loop settings stay in this browser.</p>
+          <p id="clipLoopStatus" class="clip-loop-status" role="status" aria-live="polite"></p>
+          <a id="openClipVideoLink" class="clip-fallback-link" target="_blank" rel="noopener noreferrer" hidden>Open video on YouTube</a>
+
+          <section class="saved-loops" aria-labelledby="savedLoopsTitle">
+            <div class="saved-loops-header">
+              <h3 id="savedLoopsTitle">Saved YouTube loops</h3>
+              <span id="savedLoopsCount">0 saved</span>
+            </div>
+            <p id="savedLoopsEmpty" class="saved-loops-empty">Your saved loops will appear here.</p>
+            <ul id="savedYouTubeLoops" class="saved-loop-list" aria-labelledby="savedLoopsTitle" hidden></ul>
+          </section>
+
+          <div id="clipWorkspace" class="clip-workspace" hidden>
+            <div id="clipYoutubeFrame" class="clip-player-frame">
+              <div id="youtubePlayer"></div>
+            </div>
+            <audio id="clipLocalAudio" class="clip-local-audio" controls preload="metadata" hidden></audio>
+            <div class="clip-position">
+              <span>Current position</span>
+              <strong id="clipCurrentTime">0:00</strong>
+            </div>
+            <div class="clip-boundaries">
+              <div class="clip-boundary">
+                <label for="clipStartTime">Clip starts at (timestamp)</label>
+                <div class="clip-boundary-control">
+                  <input id="clipStartTime" type="text" inputmode="numeric" placeholder="0:00" value="0:00" disabled />
+                  <button id="markClipStart" class="secondary-btn small" type="button" disabled>Mark start</button>
+                </div>
+              </div>
+              <div class="clip-boundary">
+                <label for="clipEndTime">Clip ends at (timestamp)</label>
+                <div class="clip-boundary-control">
+                  <input id="clipEndTime" type="text" inputmode="numeric" placeholder="0:10" value="0:10" disabled />
+                  <button id="markClipEnd" class="secondary-btn small" type="button" disabled>Mark end</button>
+                </div>
+              </div>
+            </div>
+            <p id="clipDurationHint" class="clip-time-hint">Load a video to see its maximum timestamp.</p>
+            <div id="youtubeSavedControls" class="clip-save-controls" hidden>
+              <label for="savedClipName">Loop name</label>
+              <div class="clip-save-row">
+                <input id="savedClipName" type="text" maxlength="60" placeholder="e.g., Yaman ascending phrase" />
+                <button id="saveYouTubeLoop" class="secondary-btn" type="button" disabled>Save loop</button>
+              </div>
+            </div>
+            <button id="clipLoopToggle" class="primary-btn" type="button" disabled>Play clip loop</button>
+          </div>
+        </div>
+      </section>
     </main>
 
     <footer class="site-footer">
       <div>
         <strong>HCMAI</strong>
-        <span>Hindustani Classical Music Academy</span>
+        <span>Learn Hindustani Classical Music</span>
       </div>
-      <nav>
-        <a href="about.html">About</a>
-        <a href="lessons.html">Lessons</a>
-        <a href="practice.html">Practice</a>
-      </nav>
     </footer>
 
     <nav class="bottom-nav" aria-label="Mobile navigation">
       <a href="index.html" class="bottom-item"><span>Home</span></a>
       <a href="raag-explorer.html" class="bottom-item"><span>Raags</span></a>
       <a href="thaat-explorer.html" class="bottom-item"><span>Thaats</span></a>
+      <a href="compose.html" class="bottom-item"><span>Compose</span></a>
       <a href="lessons.html" class="bottom-item"><span>Lessons</span></a>
       <a href="practice.html" class="bottom-item active"><span>Practice</span></a>
     </nav>
 
-    <script src="js/main.js"></script>
-    <script type="module" src="js/auth.js"></script>
+    <script src="js/main.js?v=20261006-curatedloops-v2"></script>
+    <script type="module" src="js/auth.js?v=20261006-savedloops-account-scope"></script>
   </body>
 </html>

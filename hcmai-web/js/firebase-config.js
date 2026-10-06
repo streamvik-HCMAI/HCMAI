@@ -8,11 +8,12 @@ const developmentConfig = {
 };
 
 const productionConfig = {
-  apiKey: 'AIzaSyCmc-LFqeqBnuiGV0l3oPhpMIC8Qv0b3LU',
+  apiKey: 'AIzaSyAwRkRd7rC8BecEWc2TCo5A5PcqSlUBWVM',
   authDomain: 'hcmai-v3e0h9.firebaseapp.com',
   projectId: 'hcmai-v3e0h9',
   storageBucket: 'hcmai-v3e0h9.firebasestorage.app',
-  messagingSenderId: '885235463396'
+  messagingSenderId: '885235463396',
+  appId: '1:885235463396:web:ce4462b4edff96b900a8f1'
 };
 
 const host = window.location.hostname;

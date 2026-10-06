@@ -17,7 +17,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/styles.css?v=20261004-lessons" />
   </head>
   <body data-page="lessons">
     <header class="topbar">
@@ -25,7 +25,7 @@
         <div class="brand-mark">H</div>
         <div class="brand-copy">
           <span class="brand-name">HCMAI</span>
-          <span class="brand-tag">Classical Music Academy</span>
+          <span class="brand-tag">Hindustani Classical Music</span>
         </div>
       </div>
 
@@ -34,6 +34,7 @@
         <a href="raag-explorer.html" class="nav-item">Raag Explorer</a>
         <a href="thaat-explorer.html" class="nav-item">Thaat Explorer</a>
         <a href="lessons.html" class="nav-item active">Lessons</a>
+        <a href="compose.html" class="nav-item">Compose</a>
         <a href="practice.html" class="nav-item">Practice</a>
         <a href="about.html" class="nav-item">About</a>
       </nav>
@@ -45,65 +46,32 @@
       <section class="section-surface hero-inline">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Your path</p>
+            <p class="eyebrow">Study and practice</p>
             <h1>Lessons</h1>
           </div>
-          <button class="secondary-btn small">Continue</button>
         </div>
+      </section>
+
+      <section id="moodleAdminTools" class="section-surface moodle-admin-tools" hidden>
+        <div>
+          <p class="eyebrow">Course catalog</p>
+          <h2>Course directory sync</h2>
+          <p>Courses, enrollment, lessons, and media are managed in the learning platform. This page provides the course directory.</p>
+        </div>
+        <button id="syncMoodleCatalogButton" class="secondary-btn" type="button">Sync now</button>
+        <p id="moodleSyncStatus" class="moodle-sync-status" role="status" aria-live="polite"></p>
       </section>
 
       <section class="lesson-layout">
         <aside class="section-surface lesson-sidebar">
-          <h3>Course tracks</h3>
-          <ul>
-            <li class="active">Foundations</li>
-            <li>Swara practice</li>
-            <li>Raag studies</li>
-            <li>Taal and rhythm</li>
-            <li>Bandish building</li>
+          <h3>Course catalog</h3>
+          <ul id="lessonTopicFilters">
+            <li class="active">All courses</li>
           </ul>
         </aside>
 
-        <div class="lesson-cards">
-          <article class="lesson-card section-surface">
-            <div class="lesson-top">
-              <span class="chip accent">Lesson 1</span>
-              <span>10 min</span>
-            </div>
-            <h3>Introduction to Swaras</h3>
-            <p>Learn the seven notes and the structure behind melodic movement.</p>
-            <button class="primary-btn small">Open lesson</button>
-          </article>
-
-          <article class="lesson-card section-surface">
-            <div class="lesson-top">
-              <span class="chip neutral">Lesson 2</span>
-              <span>15 min</span>
-            </div>
-            <h3>Understanding Thaat</h3>
-            <p>Explore how the parent scale shapes a raag’s identity and mood.</p>
-            <button class="primary-btn small">Open lesson</button>
-          </article>
-
-          <article class="lesson-card section-surface">
-            <div class="lesson-top">
-              <span class="chip purple">Lesson 3</span>
-              <span>18 min</span>
-            </div>
-            <h3>Prahar-driven practice</h3>
-            <p>Map practice sessions to time of day and discover suitable raags.</p>
-            <button class="primary-btn small">Open lesson</button>
-          </article>
-
-          <article class="lesson-card section-surface">
-            <div class="lesson-top">
-              <span class="chip green">Lesson 4</span>
-              <span>12 min</span>
-            </div>
-            <h3>Rhythmic structures</h3>
-            <p>Build confidence in tala and cycle-based patterns through guided drills.</p>
-            <button class="primary-btn small">Open lesson</button>
-          </article>
+        <div id="lessonCards" class="lesson-cards" aria-live="polite">
+          <p class="lesson-status">Loading courses...</p>
         </div>
       </section>
     </main>
@@ -111,24 +79,21 @@
     <footer class="site-footer">
       <div>
         <strong>HCMAI</strong>
-        <span>Hindustani Classical Music Academy</span>
+        <span>Learn Hindustani Classical Music</span>
       </div>
-      <nav>
-        <a href="about.html">About</a>
-        <a href="lessons.html">Lessons</a>
-        <a href="practice.html">Practice</a>
-      </nav>
     </footer>
 
     <nav class="bottom-nav" aria-label="Mobile navigation">
       <a href="index.html" class="bottom-item"><span>Home</span></a>
       <a href="raag-explorer.html" class="bottom-item"><span>Raags</span></a>
       <a href="thaat-explorer.html" class="bottom-item"><span>Thaats</span></a>
+      <a href="compose.html" class="bottom-item"><span>Compose</span></a>
       <a href="lessons.html" class="bottom-item active"><span>Lessons</span></a>
       <a href="practice.html" class="bottom-item"><span>Practice</span></a>
     </nav>
 
     <script src="js/main.js"></script>
     <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/moodle-lessons.js?v=20261004-brand-neutral"></script>
   </body>
 </html>

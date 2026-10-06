@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Composition Data Lab | HCMAI</title>
+    <meta name="description" content="Explore source-separated Hindustani composition datasets." />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/styles.css?v=20261006-raagedit-v2" />
+  </head>
+  <body data-page="data-lab">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <div class="brand-mark">H</div>
+        <div class="brand-copy">
+          <span class="brand-name">HCMAI</span>
+          <span class="brand-tag">Hindustani Classical Music</span>
+        </div>
+      </div>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="index.html" class="nav-item">Home</a>
+        <a href="raag-explorer.html" class="nav-item">Raag Explorer</a>
+        <a href="thaat-explorer.html" class="nav-item">Thaat Explorer</a>
+        <a href="lessons.html" class="nav-item">Lessons</a>
+        <a href="compose.html" class="nav-item">Compose</a>
+        <a href="practice.html" class="nav-item">Practice</a>
+        <a href="about.html" class="nav-item">About</a>
+      </nav>
+      <button class="auth-button primary-btn small" type="button">Log in</button>
+    </header>
+
+    <main class="page-shell narrow-shell">
+      <section class="section-surface hero-inline">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Research</p>
+            <h1>Composition Data Lab</h1>
+          </div>
+          <div class="inline-actions">
+            <a href="raag-explorer.html" class="secondary-btn small">Raag Explorer</a>
+            <button id="importCompositionDatasets" class="secondary-btn small admin-only" type="button" data-admin-only>Import dataset bundles</button>
+            <button id="exportCompositionDataset" class="secondary-btn small admin-only" type="button" data-admin-only disabled>Export dataset</button>
+            <input id="compositionDatasetFiles" type="file" accept="application/json,.json" multiple hidden />
+          </div>
+        </div>
+        <p id="compositionDatasetStatus" class="raag-status" role="status" aria-live="polite">Checking administrator access...</p>
+      </section>
+
+      <div class="dataset-tabs" role="tablist" aria-label="Data views">
+        <button id="compositionTab" class="secondary-btn small is-active" type="button" role="tab" aria-selected="true" aria-controls="compositionLab">Composition datasets</button>
+        <button id="sourceRecordsTab" class="secondary-btn small" type="button" role="tab" aria-selected="false" aria-controls="sourceRecordsLab">Raw source records</button>
+      </div>
+
+      <section id="compositionLab" class="composition-lab" role="tabpanel" aria-labelledby="compositionTab" hidden>
+        <aside class="dataset-sidebar">
+          <label class="dataset-select-wrap" for="compositionDatasetSelect">
+            <span>Dataset</span>
+            <select id="compositionDatasetSelect"></select>
+          </label>
+          <dl id="compositionDatasetMeta" class="dataset-meta"></dl>
+          <label for="compositionSearch">
+            <span>Search records</span>
+            <input id="compositionSearch" type="search" placeholder="Raag, composer, title, or value" />
+          </label>
+        </aside>
+
+        <section class="dataset-analysis" aria-labelledby="datasetAnalysisTitle">
+          <h2 id="datasetAnalysisTitle">Dataset summary</h2>
+          <div id="compositionFieldStats" class="dataset-field-stats"></div>
+          <h3>Records</h3>
+          <p id="compositionRowCount" class="dataset-row-count"></p>
+          <div class="dataset-table-wrap">
+            <table id="compositionRecordsTable" class="dataset-table">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="dataset-pagination">
+            <button id="compositionPreviousPage" class="secondary-btn small" type="button">Previous</button>
+            <span id="compositionPageLabel"></span>
+            <button id="compositionNextPage" class="secondary-btn small" type="button">Next</button>
+          </div>
+          <h3>Selected record</h3>
+          <p id="compositionRecordIdentity" class="dataset-row-count">No record selected.</p>
+          <div class="dataset-editor-actions">
+            <button id="editCompositionRecord" class="secondary-btn small" type="button" disabled>Edit fields</button>
+            <button id="saveCompositionRecord" class="primary-btn small" type="button" hidden>Save changes</button>
+            <button id="cancelCompositionRecordEdit" class="secondary-btn small" type="button" hidden>Cancel</button>
+          </div>
+          <div id="compositionRecordEditor" class="dataset-form-editor" hidden></div>
+          <pre id="compositionRecordDetail" class="dataset-record-detail">Select a row to inspect its fields.</pre>
+        </section>
+      </section>
+
+      <section id="sourceRecordsLab" class="composition-lab" role="tabpanel" aria-labelledby="sourceRecordsTab" hidden>
+        <aside class="dataset-sidebar">
+          <label class="dataset-select-wrap" for="sourceRecordFilter">
+            <span>Source</span>
+            <select id="sourceRecordFilter">
+              <option value="all">All sources</option>
+              <option value="naadaalay">Naadaalay</option>
+              <option value="dunya">CompMusic Dunya</option>
+              <option value="wikipedia">Wikipedia</option>
+              <option value="wikidata">Wikidata</option>
+            </select>
+          </label>
+          <p id="sourceRecordScope" class="dataset-row-count">6,385 source records</p>
+        </aside>
+        <section class="dataset-analysis" aria-labelledby="sourceRecordHeading">
+          <h2 id="sourceRecordHeading">Raw source records</h2>
+          <p id="sourceRecordCount" class="dataset-row-count"></p>
+          <div class="dataset-table-wrap">
+            <table id="sourceRecordsTable" class="dataset-table">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="dataset-pagination">
+            <button id="sourcePreviousPage" class="secondary-btn small" type="button">Previous</button>
+            <span id="sourcePageLabel"></span>
+            <button id="sourceNextPage" class="secondary-btn small" type="button">Next</button>
+          </div>
+          <h3>Selected source record</h3>
+          <p id="sourceRecordIdentity" class="dataset-row-count">No record selected.</p>
+          <div class="dataset-editor-actions">
+            <button id="editSourceRecord" class="secondary-btn small" type="button" disabled>Edit fields</button>
+            <button id="saveSourceRecord" class="primary-btn small" type="button" hidden>Save changes</button>
+            <button id="cancelSourceRecordEdit" class="secondary-btn small" type="button" hidden>Cancel</button>
+          </div>
+          <div id="sourceRecordEditor" class="dataset-form-editor" hidden></div>
+          <pre id="sourceRecordDetail" class="dataset-record-detail">Select a row to inspect its source fields.</pre>
+        </section>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div><strong>HCMAI</strong><span>Learn Hindustani Classical Music</span></div>
+    </footer>
+    <script src="js/main.js"></script>
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/data-lab.js?v=20261006-structured-editor-v3"></script>
+  </body>
+</html>

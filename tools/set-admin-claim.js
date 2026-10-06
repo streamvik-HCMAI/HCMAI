@@ -1,20 +1,35 @@
-const { initializeApp, applicationDefault } = require('firebase-admin/app');
-const { getAuth } = require('firebase-admin/auth');
+const { createRequire } = require('module');
+const requireFunctions = createRequire(require.resolve('../functions/package.json'));
+const { initializeApp, applicationDefault } = requireFunctions('firebase-admin/app');
+const { getAuth } = requireFunctions('firebase-admin/auth');
 
-const projectId = 'hcmai-v3e0h9';
-const adminUserUid = '09JvBvWi5rebnT4honz5Q2N6Uoe2';
+const [, , projectId, adminUserUid, expectedEmail] = process.argv;
+
+if (!projectId || !adminUserUid || !expectedEmail) {
+  console.error('Usage: node tools/set-admin-claim.js <project-id> <firebase-uid> <expected-email>');
+  process.exit(1);
+}
 
 initializeApp({
   credential: applicationDefault(),
   projectId
 });
 
-getAuth().setCustomUserClaims(adminUserUid, { admin: true })
-  .then(() => {
-    console.log(`Admin claim granted to ${adminUserUid}.`);
-    console.log('Sign out and sign back in to refresh the Firebase ID token.');
-  })
-  .catch((error) => {
-    console.error('Unable to grant admin claim:', error.message);
-    process.exitCode = 1;
+async function grantAdminClaim() {
+  const user = await getAuth().getUser(adminUserUid);
+  if (user.email?.toLowerCase() !== expectedEmail.toLowerCase()) {
+    throw new Error(`UID email mismatch: expected ${expectedEmail}, found ${user.email || 'no email'}.`);
+  }
+
+  await getAuth().setCustomUserClaims(adminUserUid, {
+    ...user.customClaims,
+    admin: true
   });
+  console.log(`Admin claim granted to ${adminUserUid}.`);
+  console.log('Sign out and sign back in to refresh the Firebase ID token.');
+}
+
+grantAdminClaim().catch((error) => {
+  console.error('Unable to grant admin claim:', error.message);
+  process.exitCode = 1;
+});

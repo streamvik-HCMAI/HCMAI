@@ -10,6 +10,11 @@ service cloud.firestore {
       return signedIn() && request.auth.token.admin == true;
     }
 
+    match /moodlePublicCourses/{courseId} {
+      allow read: if resource.data.isPublic == true;
+      allow write: if false;
+    }
+
     match /raags/{raagId} {
       allow read: if resource.data.isPublished == true || isAdmin();
       allow create, update, delete: if isAdmin();
@@ -17,6 +22,28 @@ service cloud.firestore {
       match /topics/{topicId} {
         allow read: if resource.data.requiresLogin != true || signedIn() || isAdmin();
         allow create, update, delete: if isAdmin();
+      }
+
+      match /practiceLoops/{loopId} {
+        allow read: if isAdmin() || (
+          get(/databases/$(database)/documents/raags/$(raagId)).data.isPublished == true
+          && resource.data.isPublished == true
+          && (resource.data.accessLevel == 'public'
+            || (resource.data.accessLevel == 'signed-in' && signedIn()))
+        );
+        allow create, update, delete: if isAdmin();
+      }
+    }
+
+    match /raagSourceRecords/{recordId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
+    match /compositionDatasets/{datasetId} {
+      allow read, create, update, delete: if isAdmin();
+
+      match /records/{recordId} {
+        allow read, create, update, delete: if isAdmin();
       }
     }
   }

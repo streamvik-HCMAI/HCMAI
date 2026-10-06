@@ -52,12 +52,638 @@ if (playToggle && playIcon && selectedScaleLabel && scaleButtons.length) {
       if (tanpuraAudio) {
         const fileName = button.textContent.trim().replace('#', 'sharp');
         tanpuraAudio.src = `assets/tanpura_${fileName}.mp3`;
+        tanpuraAudio.playbackRate = ['G#', 'A', 'B'].includes(button.textContent.trim())
+          ? Math.pow(2, -1 / 12)
+          : 1;
         if (isPlaying) tanpuraAudio.play().catch(() => {});
       }
     });
   });
 
   if (tanpuraAudio) tanpuraAudio.src = 'assets/tanpura_C.mp3';
+}
+
+const clipVideoForm = document.getElementById('clipVideoForm');
+const clipVideoUrl = document.getElementById('youtubeVideoUrl');
+const clipLoadButton = document.getElementById('loadClipVideo');
+const clipAudioFile = document.getElementById('clipAudioFile');
+const clipAudioFileName = document.getElementById('clipAudioFileName');
+const clipWorkspace = document.getElementById('clipWorkspace');
+const clipYoutubeFrame = document.getElementById('clipYoutubeFrame');
+const clipLocalAudio = document.getElementById('clipLocalAudio');
+const clipStatus = document.getElementById('clipLoopStatus');
+const clipFallbackLink = document.getElementById('openClipVideoLink');
+const clipDurationHint = document.getElementById('clipDurationHint');
+const clipStartTime = document.getElementById('clipStartTime');
+const clipEndTime = document.getElementById('clipEndTime');
+const markClipStart = document.getElementById('markClipStart');
+const markClipEnd = document.getElementById('markClipEnd');
+const clipCurrentTime = document.getElementById('clipCurrentTime');
+const clipLoopToggle = document.getElementById('clipLoopToggle');
+const savedLoopsCount = document.getElementById('savedLoopsCount');
+const savedLoopsEmpty = document.getElementById('savedLoopsEmpty');
+const savedYouTubeLoopsList = document.getElementById('savedYouTubeLoops');
+const youtubeSavedControls = document.getElementById('youtubeSavedControls');
+const savedClipName = document.getElementById('savedClipName');
+const saveYouTubeLoopButton = document.getElementById('saveYouTubeLoop');
+
+if (
+  clipVideoForm && clipVideoUrl && clipLoadButton && clipAudioFile && clipAudioFileName && clipWorkspace && clipYoutubeFrame && clipLocalAudio &&
+  clipStatus && clipFallbackLink && clipDurationHint &&
+  clipStartTime && clipEndTime && markClipStart && markClipEnd && clipCurrentTime && clipLoopToggle
+) {
+  let youtubePlayer = null;
+  let youtubeApiPromise = null;
+  let playerIsReady = false;
+  let loopingClip = false;
+  let loopSeekAvailableAt = 0;
+  let currentVideoId = '';
+  let activeClipSource = '';
+  let selectedSavedLoopId = '';
+  let savedYouTubeLoops = [];
+  let localClipObjectUrl = null;
+  let clipClockInterval = null;
+  const savedLoopsStoragePrefix = 'hcmai.practice.saved-youtube-loops.v2:';
+  const legacySavedLoopsStorageKey = 'hcmai.practice.saved-youtube-loops.v1';
+  let savedLoopsStorageKey = `${savedLoopsStoragePrefix}guest`;
+  let savedLoopsOwnerInitialized = false;
+
+  const setClipStatus = (message) => {
+    clipStatus.textContent = message;
+  };
+
+  const getVideoId = (value) => {
+    let url;
+    try {
+      url = new URL(value.trim());
+    } catch {
+      return null;
+    }
+
+    const host = url.hostname.toLowerCase().replace(/^www\./, '');
+    let videoId = null;
+
+    if (host === 'youtu.be') {
+      videoId = url.pathname.split('/').filter(Boolean)[0];
+    } else if (['youtube.com', 'm.youtube.com', 'music.youtube.com'].includes(host)) {
+      if (url.pathname === '/watch') {
+        videoId = url.searchParams.get('v');
+      } else {
+        videoId = url.pathname.match(/^\/(?:embed|shorts|live)\/([^/]+)/)?.[1];
+      }
+    }
+
+    return videoId && /^[\w-]{11}$/.test(videoId) ? videoId : null;
+  };
+
+  const formatClipTime = (seconds) => {
+    const wholeSeconds = Math.floor(seconds);
+    const hours = Math.floor(wholeSeconds / 3600);
+    const minutes = Math.floor(wholeSeconds / 60) % 60;
+    const remainder = wholeSeconds % 60;
+    if (hours > 0) return `${hours}:${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
+    return `${Math.floor(wholeSeconds / 60)}:${String(remainder).padStart(2, '0')}`;
+  };
+
+  const parseClipTime = (value) => {
+    const parts = value.trim().split(':');
+    if (parts.length < 2 || parts.length > 3 || parts.some((part) => !/^\d+$/.test(part))) return null;
+
+    const values = parts.map(Number);
+    const seconds = values[values.length - 1];
+    const minutes = values[values.length - 2];
+    if (seconds >= 60 || (values.length === 3 && minutes >= 60)) return null;
+
+    if (values.length === 3) return values[0] * 3600 + minutes * 60 + seconds;
+    return minutes * 60 + seconds;
+  };
+
+  const readSavedYouTubeLoops = (storageKey = savedLoopsStorageKey) => {
+    try {
+      const storedLoops = JSON.parse(window.localStorage.getItem(storageKey) || '[]');
+      if (!Array.isArray(storedLoops)) return [];
+      return storedLoops.filter((loop) => loop
+        && typeof loop.id === 'string'
+        && typeof loop.name === 'string'
+        && /^[\w-]{11}$/.test(loop.videoId)
+        && Number.isInteger(loop.startSeconds)
+        && Number.isInteger(loop.endSeconds)
+        && loop.startSeconds >= 0
+        && loop.endSeconds > loop.startSeconds);
+    } catch {
+      return [];
+    }
+  };
+
+  savedYouTubeLoops = readSavedYouTubeLoops();
+
+  const persistSavedYouTubeLoops = () => {
+    try {
+      window.localStorage.setItem(savedLoopsStorageKey, JSON.stringify(savedYouTubeLoops));
+      return true;
+    } catch {
+      setClipStatus('Saved loops could not be stored in this browser. Check its available site storage.');
+      return false;
+    }
+  };
+
+  const renderSavedYouTubeLoops = () => {
+    savedLoopsCount.textContent = `${savedYouTubeLoops.length} saved`;
+    savedLoopsEmpty.hidden = savedYouTubeLoops.length > 0;
+    savedYouTubeLoopsList.hidden = savedYouTubeLoops.length === 0;
+    savedYouTubeLoopsList.replaceChildren();
+
+    savedYouTubeLoops.forEach((loop) => {
+      const item = document.createElement('li');
+      item.className = 'saved-loop-item';
+
+      const details = document.createElement('div');
+      details.className = 'saved-loop-details';
+      const name = document.createElement('strong');
+      name.textContent = loop.name;
+      const boundaries = document.createElement('span');
+      boundaries.textContent = `YouTube clip ${formatClipTime(loop.startSeconds)} - ${formatClipTime(loop.endSeconds)}`;
+      details.append(name, boundaries);
+
+      const actions = document.createElement('div');
+      actions.className = 'saved-loop-actions';
+      const loadButton = document.createElement('button');
+      loadButton.className = 'secondary-btn small';
+      loadButton.type = 'button';
+      loadButton.dataset.savedLoopAction = 'load';
+      loadButton.dataset.savedLoopId = loop.id;
+      loadButton.textContent = 'Load';
+      loadButton.setAttribute('aria-label', `Load ${loop.name}`);
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'secondary-btn small';
+      deleteButton.type = 'button';
+      deleteButton.dataset.savedLoopAction = 'delete';
+      deleteButton.dataset.savedLoopId = loop.id;
+      deleteButton.textContent = 'Delete';
+      deleteButton.setAttribute('aria-label', `Delete ${loop.name}`);
+      actions.append(loadButton, deleteButton);
+      item.append(details, actions);
+      savedYouTubeLoopsList.append(item);
+    });
+  };
+
+  const switchSavedLoopOwner = (uid) => {
+    const ownerKey = uid || 'guest';
+    const nextStorageKey = `${savedLoopsStoragePrefix}${ownerKey}`;
+    if (nextStorageKey === savedLoopsStorageKey) {
+      savedLoopsOwnerInitialized = true;
+      return;
+    }
+
+    if (uid) {
+      try {
+        const legacyLoops = window.localStorage.getItem(legacySavedLoopsStorageKey);
+        if (legacyLoops && !window.localStorage.getItem(nextStorageKey)) {
+          window.localStorage.setItem(nextStorageKey, legacyLoops);
+        }
+        if (legacyLoops) window.localStorage.removeItem(legacySavedLoopsStorageKey);
+      } catch {
+        setClipStatus('Older saved loops could not be moved into this account in this browser.');
+      }
+    }
+
+    if (savedLoopsOwnerInitialized && !savedLoopsStorageKey.endsWith(':guest') && activeClipSource === 'youtube') {
+      stopClipPlayback();
+      youtubePlayer?.stopVideo?.();
+      activeClipSource = '';
+      currentVideoId = '';
+      clipWorkspace.hidden = true;
+      clipFallbackLink.hidden = true;
+      clipVideoUrl.value = '';
+    }
+    selectedSavedLoopId = '';
+    savedClipName.value = '';
+    youtubeSavedControls.hidden = true;
+    savedLoopsStorageKey = nextStorageKey;
+    savedLoopsOwnerInitialized = true;
+    savedYouTubeLoops = readSavedYouTubeLoops();
+    renderSavedYouTubeLoops();
+  };
+
+  const getClipDuration = () => activeClipSource === 'audio'
+    ? clipLocalAudio.duration
+    : youtubePlayer?.getDuration() || 0;
+
+  const getClipCurrentTime = () => activeClipSource === 'audio'
+    ? clipLocalAudio.currentTime
+    : youtubePlayer?.getCurrentTime() || 0;
+
+  const isClipPlaying = () => activeClipSource === 'audio'
+    ? !clipLocalAudio.paused && !clipLocalAudio.ended
+    : youtubePlayer?.getPlayerState() === window.YT?.PlayerState.PLAYING;
+
+  const seekClip = (seconds) => {
+    if (activeClipSource === 'audio') clipLocalAudio.currentTime = seconds;
+    else if (activeClipSource === 'youtube' && playerIsReady) youtubePlayer.seekTo(seconds, true);
+  };
+
+  const releaseLocalClip = () => {
+    clipLocalAudio.pause();
+    clipLocalAudio.removeAttribute('src');
+    clipLocalAudio.load();
+    if (localClipObjectUrl) URL.revokeObjectURL(localClipObjectUrl);
+    localClipObjectUrl = null;
+  };
+
+  const stopClipPlayback = () => {
+    loopingClip = false;
+    if (activeClipSource === 'audio') clipLocalAudio.pause();
+    if (activeClipSource === 'youtube' && playerIsReady) youtubePlayer.pauseVideo();
+    clipLoopToggle.textContent = 'Play clip loop';
+  };
+
+  const handleClipEnded = () => {
+    if (!loopingClip) return;
+    const bounds = readClipBounds();
+    if (!bounds) {
+      stopClipPlayback();
+      setClipStatus('Clip loop stopped. Check the start and end timestamps.');
+      return;
+    }
+
+    loopSeekAvailableAt = performance.now() + 200;
+    seekClip(bounds.start);
+    if (activeClipSource === 'audio') {
+      clipLocalAudio.play().catch(() => {
+        stopClipPlayback();
+        setClipStatus('This audio file could not be played by the browser.');
+      });
+    } else {
+      youtubePlayer.playVideo();
+    }
+  };
+
+  const updateClipDurationHint = () => {
+    const duration = Math.floor(getClipDuration());
+    if (!Number.isFinite(duration) || duration <= 0) {
+      clipDurationHint.textContent = 'Waiting for the media duration.';
+      return;
+    }
+
+    const mediaLabel = activeClipSource === 'audio' ? 'Audio duration' : 'Video duration';
+    clipDurationHint.textContent = `${mediaLabel}: ${formatClipTime(duration)}. End time cannot exceed this.`;
+    const end = parseClipTime(clipEndTime.value);
+    if (end !== null && end > duration) clipEndTime.value = formatClipTime(duration);
+  };
+
+  const startClipClock = () => {
+    if (clipClockInterval) return;
+    clipClockInterval = window.setInterval(() => {
+      if (!activeClipSource) return;
+      const currentTime = getClipCurrentTime();
+      if (Number.isFinite(currentTime)) clipCurrentTime.textContent = formatClipTime(currentTime);
+      if (!loopingClip || !isClipPlaying()) return;
+
+      const bounds = readClipBounds();
+      if (!bounds) {
+        stopClipPlayback();
+        setClipStatus('Clip loop stopped. Check the start and end timestamps.');
+        return;
+      }
+
+      if (currentTime >= bounds.end && performance.now() >= loopSeekAvailableAt) {
+        loopSeekAvailableAt = performance.now() + 200;
+        seekClip(bounds.start);
+      }
+    }, 100);
+  };
+
+  const readClipBounds = () => {
+    const start = parseClipTime(clipStartTime.value);
+    const end = parseClipTime(clipEndTime.value);
+    const duration = getClipDuration() || 0;
+
+    if (start === null || end === null || start < 0 || end <= start || duration <= 0) {
+      return null;
+    }
+    if (duration && end > duration) return null;
+    return { start, end };
+  };
+
+  const updateSaveYouTubeLoopButton = () => {
+    saveYouTubeLoopButton.disabled = activeClipSource !== 'youtube' || !playerIsReady || !readClipBounds();
+    saveYouTubeLoopButton.textContent = selectedSavedLoopId ? 'Update saved loop' : 'Save loop';
+  };
+
+  const loadYouTubeApi = () => {
+    if (window.YT?.Player) return Promise.resolve(window.YT);
+    if (youtubeApiPromise) return youtubeApiPromise;
+
+    youtubeApiPromise = new Promise((resolve, reject) => {
+      window.onYouTubeIframeAPIReady = () => resolve(window.YT);
+      const script = document.createElement('script');
+      script.src = 'https://www.youtube.com/iframe_api';
+      script.async = true;
+      script.onerror = () => reject(new Error('YouTube player could not be loaded.'));
+      document.head.append(script);
+    });
+
+    return youtubeApiPromise;
+  };
+
+  const enableClipControls = () => {
+    [clipStartTime, clipEndTime, markClipStart, markClipEnd, clipLoopToggle].forEach((control) => {
+      control.disabled = false;
+    });
+  };
+
+  const initializeYouTubePlayer = (YT) => {
+    youtubePlayer = new YT.Player('youtubePlayer', {
+      width: '100%',
+      height: '100%',
+      videoId: currentVideoId,
+      playerVars: {
+        controls: 1,
+        playsinline: 1,
+        rel: 0,
+        origin: window.location.origin
+      },
+      events: {
+        onReady: () => {
+          playerIsReady = true;
+          enableClipControls();
+          if (activeClipSource === 'youtube') {
+            updateClipDurationHint();
+            setClipStatus('Video ready. Set the clip boundaries, then play the loop.');
+            updateSaveYouTubeLoopButton();
+          }
+
+          startClipClock();
+        },
+        onStateChange: (event) => {
+          if (activeClipSource !== 'youtube') return;
+          if (event.data === YT.PlayerState.CUED) {
+            enableClipControls();
+            updateClipDurationHint();
+            setClipStatus('Video ready. Set the clip boundaries, then play the loop.');
+            updateSaveYouTubeLoopButton();
+          }
+          if (event.data === YT.PlayerState.PLAYING) {
+            updateClipDurationHint();
+            setClipStatus(loopingClip ? 'Playing the selected clip on loop.' : 'YouTube video is playing.');
+          }
+          if (event.data === YT.PlayerState.PAUSED && loopingClip) {
+            loopingClip = false;
+            clipLoopToggle.textContent = 'Play clip loop';
+            setClipStatus('Clip loop paused.');
+          }
+          if (event.data === YT.PlayerState.ENDED && loopingClip) {
+            handleClipEnded(YT);
+          }
+        },
+        onError: (event) => {
+          loopingClip = false;
+          clipLoopToggle.textContent = 'Play clip loop';
+          const errorMessages = {
+            2: 'YouTube rejected this video link. Check that it points to a video.',
+            5: 'YouTube could not play this video in its embedded player. Try opening it on YouTube or using another browser.',
+            100: 'This video is unavailable or private on YouTube.',
+            101: 'The video owner does not allow playback in embedded players.',
+            150: 'The video owner does not allow playback in embedded players.',
+            153: 'YouTube could not verify the embedded player origin. Try the hosted site over HTTPS.'
+          };
+          setClipStatus(errorMessages[event.data] || `YouTube could not play this video (error ${event.data}).`);
+          clipFallbackLink.href = `https://www.youtube.com/watch?v=${encodeURIComponent(currentVideoId)}`;
+          clipFallbackLink.hidden = false;
+        }
+      }
+    });
+  };
+
+  clipLocalAudio.addEventListener('loadedmetadata', () => {
+    if (activeClipSource !== 'audio') return;
+    const duration = Math.floor(clipLocalAudio.duration);
+    clipStartTime.value = '0:00';
+    clipEndTime.value = formatClipTime(Math.min(10, Math.max(1, duration)));
+    enableClipControls();
+    updateClipDurationHint();
+    startClipClock();
+    setClipStatus('Audio ready. Set the clip boundaries, then play the loop.');
+  });
+
+  clipLocalAudio.addEventListener('play', () => {
+    if (activeClipSource === 'audio') {
+      setClipStatus(loopingClip ? 'Playing the selected clip on loop.' : 'Audio is playing.');
+    }
+  });
+
+  clipLocalAudio.addEventListener('pause', () => {
+    if (activeClipSource === 'audio' && loopingClip) {
+      loopingClip = false;
+      clipLoopToggle.textContent = 'Play clip loop';
+      setClipStatus('Clip loop paused.');
+    }
+  });
+
+  clipLocalAudio.addEventListener('ended', handleClipEnded);
+
+  clipLocalAudio.addEventListener('error', () => {
+    if (activeClipSource !== 'audio') return;
+    stopClipPlayback();
+    setClipStatus('This audio file could not be played. Try MP3, WAV, M4A, or OGG.');
+  });
+
+  clipAudioFile.addEventListener('change', () => {
+    const file = clipAudioFile.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('audio/') && !/\.(mp3|wav|m4a|ogg|opus|aac|flac)$/i.test(file.name)) {
+      setClipStatus('Choose a supported audio file.');
+      clipAudioFileName.textContent = '';
+      clipAudioFile.value = '';
+      return;
+    }
+
+    stopClipPlayback();
+    activeClipSource = '';
+    selectedSavedLoopId = '';
+    youtubeSavedControls.hidden = true;
+    releaseLocalClip();
+    activeClipSource = 'audio';
+    clipYoutubeFrame.hidden = true;
+    clipLocalAudio.hidden = false;
+    clipWorkspace.hidden = false;
+    clipFallbackLink.hidden = true;
+    clipAudioFileName.textContent = file.name;
+    setClipStatus('Loading audio file...');
+    localClipObjectUrl = URL.createObjectURL(file);
+    clipLocalAudio.src = localClipObjectUrl;
+    clipAudioFile.value = '';
+  });
+
+  window.addEventListener('pagehide', () => {
+    if (localClipObjectUrl) URL.revokeObjectURL(localClipObjectUrl);
+  });
+
+  const loadYouTubeClip = async (videoId, { startSeconds = 0, endSeconds = 10, savedLoopId = '' } = {}) => {
+    clipFallbackLink.hidden = true;
+    currentVideoId = videoId;
+    selectedSavedLoopId = savedLoopId;
+    stopClipPlayback();
+    activeClipSource = '';
+    releaseLocalClip();
+    activeClipSource = 'youtube';
+    youtubeSavedControls.hidden = false;
+    clipYoutubeFrame.hidden = false;
+    clipLocalAudio.hidden = true;
+    clipAudioFileName.textContent = '';
+    clipWorkspace.hidden = false;
+    clipStartTime.value = formatClipTime(startSeconds);
+    clipEndTime.value = formatClipTime(endSeconds);
+    clipLoadButton.disabled = true;
+    setClipStatus('Loading YouTube player...');
+    updateSaveYouTubeLoopButton();
+
+    try {
+      const YT = await loadYouTubeApi();
+      if (!youtubePlayer) initializeYouTubePlayer(YT);
+      else youtubePlayer.cueVideoById(currentVideoId);
+    } catch {
+      youtubeApiPromise = null;
+      setClipStatus('YouTube player could not be loaded. Check your connection and try again.');
+    } finally {
+      clipLoadButton.disabled = false;
+    }
+  };
+
+  clipVideoForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const videoId = getVideoId(clipVideoUrl.value);
+    if (!videoId) {
+      setClipStatus('Enter a valid YouTube video link.');
+      return;
+    }
+
+    savedClipName.value = '';
+    await loadYouTubeClip(videoId);
+  });
+
+  savedYouTubeLoopsList.addEventListener('click', async (event) => {
+    const button = event.target.closest('button[data-saved-loop-action]');
+    if (!button) return;
+    const savedLoop = savedYouTubeLoops.find((loop) => loop.id === button.dataset.savedLoopId);
+    if (!savedLoop) return;
+
+    if (button.dataset.savedLoopAction === 'delete') {
+      savedYouTubeLoops = savedYouTubeLoops.filter((loop) => loop.id !== savedLoop.id);
+      if (!persistSavedYouTubeLoops()) return;
+      if (selectedSavedLoopId === savedLoop.id) {
+        selectedSavedLoopId = '';
+        updateSaveYouTubeLoopButton();
+      }
+      renderSavedYouTubeLoops();
+      setClipStatus(`Deleted "${savedLoop.name}".`);
+      return;
+    }
+
+    savedLoop.lastPracticedAt = Date.now();
+    savedYouTubeLoops.sort((left, right) => (right.lastPracticedAt || right.updatedAt || 0) - (left.lastPracticedAt || left.updatedAt || 0));
+    persistSavedYouTubeLoops();
+    renderSavedYouTubeLoops();
+    clipVideoUrl.value = `https://www.youtube.com/watch?v=${savedLoop.videoId}`;
+    savedClipName.value = savedLoop.name;
+    await loadYouTubeClip(savedLoop.videoId, {
+      startSeconds: savedLoop.startSeconds,
+      endSeconds: savedLoop.endSeconds,
+      savedLoopId: savedLoop.id
+    });
+  });
+
+  saveYouTubeLoopButton.addEventListener('click', () => {
+    const bounds = readClipBounds();
+    if (activeClipSource !== 'youtube' || !bounds) {
+      setClipStatus('Set valid start and end times before saving this loop.');
+      return;
+    }
+
+    const existingLoop = savedYouTubeLoops.find((loop) => loop.id === selectedSavedLoopId);
+    const name = savedClipName.value.trim()
+      || existingLoop?.name
+      || `Phrase ${formatClipTime(bounds.start)} - ${formatClipTime(bounds.end)}`;
+    const now = Date.now();
+    const savedLoop = {
+      id: existingLoop?.id || (window.crypto?.randomUUID?.() ?? `${now}-${Math.random().toString(36).slice(2)}`),
+      name,
+      videoId: currentVideoId,
+      startSeconds: bounds.start,
+      endSeconds: bounds.end,
+      createdAt: existingLoop?.createdAt || now,
+      updatedAt: now,
+      lastPracticedAt: existingLoop?.lastPracticedAt || now
+    };
+
+    savedYouTubeLoops = [savedLoop, ...savedYouTubeLoops.filter((loop) => loop.id !== savedLoop.id)];
+    if (!persistSavedYouTubeLoops()) return;
+    selectedSavedLoopId = savedLoop.id;
+    savedClipName.value = name;
+    updateSaveYouTubeLoopButton();
+    renderSavedYouTubeLoops();
+    setClipStatus(`Saved "${name}" in this browser.`);
+  });
+
+  [clipStartTime, clipEndTime].forEach((input) => input.addEventListener('input', updateSaveYouTubeLoopButton));
+  window.addEventListener('hcmai-auth-state-changed', (event) => {
+    switchSavedLoopOwner(event.detail?.uid || null);
+  });
+  renderSavedYouTubeLoops();
+
+  markClipStart.addEventListener('click', () => {
+    clipStartTime.value = formatClipTime(getClipCurrentTime());
+    updateSaveYouTubeLoopButton();
+    setClipStatus('Clip start set to the current position.');
+  });
+
+  markClipEnd.addEventListener('click', () => {
+    clipEndTime.value = formatClipTime(getClipCurrentTime());
+    updateSaveYouTubeLoopButton();
+    setClipStatus('Clip end set to the current position.');
+  });
+
+  clipLoopToggle.addEventListener('click', () => {
+    if (loopingClip) {
+      stopClipPlayback();
+      setClipStatus('Clip loop paused.');
+      return;
+    }
+
+    const bounds = readClipBounds();
+    if (!bounds) {
+      setClipStatus('Choose a valid end time after the start and within the video duration.');
+      return;
+    }
+
+    loopingClip = true;
+    loopSeekAvailableAt = performance.now() + 350;
+    clipLoopToggle.textContent = 'Pause clip loop';
+    setClipStatus('Starting clip loop...');
+    seekClip(bounds.start);
+    if (activeClipSource === 'audio') {
+      clipLocalAudio.play().catch(() => {
+        stopClipPlayback();
+        setClipStatus('This audio file could not be played by the browser.');
+      });
+    } else {
+      youtubePlayer.playVideo();
+    }
+  });
+
+  const practiceParams = new URLSearchParams(window.location.search);
+  const requestedVideoId = practiceParams.get('video') || '';
+  const requestedStart = Number(practiceParams.get('start'));
+  const requestedEnd = Number(practiceParams.get('end'));
+  if (/^[\w-]{11}$/.test(requestedVideoId)
+    && Number.isSafeInteger(requestedStart)
+    && Number.isSafeInteger(requestedEnd)
+    && requestedStart >= 0
+    && requestedEnd > requestedStart) {
+    clipVideoUrl.value = `https://www.youtube.com/watch?v=${requestedVideoId}`;
+    savedClipName.value = practiceParams.get('title') || '';
+    loadYouTubeClip(requestedVideoId, { startSeconds: requestedStart, endSeconds: requestedEnd });
+  }
 }
 
 const timerToggle = document.getElementById('timerToggle');
