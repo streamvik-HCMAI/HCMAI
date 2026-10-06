@@ -137,6 +137,10 @@ function renderStructuredFields(container, value, path = [], depth = 0) {
 
   if (value && typeof value === 'object') {
     const entries = Object.entries(value);
+    if (path[path.length - 1] === 'features' && Array.isArray(currentManifest?.featureColumns)) {
+      const featureOrder = new Map(currentManifest.featureColumns.map((key, index) => [key, index]));
+      entries.sort(([left], [right]) => (featureOrder.get(left) ?? Number.MAX_SAFE_INTEGER) - (featureOrder.get(right) ?? Number.MAX_SAFE_INTEGER));
+    }
     if (depth >= 2 || entries.length > 24) {
       renderStructuredJson(container, path, value);
       return;

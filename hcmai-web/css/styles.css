@@ -797,6 +797,111 @@ h1, h2, h3, h4, p {
   display: none;
 }
 
+.dataset-form-editor {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+  margin: 10px 0;
+}
+
+.dataset-edit-field {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--stroke);
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.dataset-edit-field > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dataset-edit-field input,
+.dataset-edit-field textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--stroke);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--text);
+  font: 400 0.88rem/1.4 "Inter", sans-serif;
+}
+
+.dataset-edit-field input[type="checkbox"] {
+  width: 20px;
+  min-height: 20px;
+  justify-self: start;
+}
+
+.dataset-edit-field input:disabled {
+  background: #f1f3f5;
+  color: var(--muted);
+}
+
+.dataset-edit-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.dataset-edit-group legend {
+  padding: 0 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.dataset-edit-group > .dataset-edit-field {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 5px;
+  border-bottom: 0;
+}
+
+.dataset-edit-complex {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  grid-column: 1 / -1;
+}
+
+.dataset-edit-complex textarea {
+  min-height: 150px;
+  resize: vertical;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.78rem;
+}
+
+.dataset-form-editor[hidden] {
+  display: none;
+}
+
+@media (max-width: 620px) {
+  .dataset-edit-field {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  .dataset-edit-group {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 760px) {
   .composition-lab:not([hidden]) {
     grid-template-columns: minmax(0, 1fr);
