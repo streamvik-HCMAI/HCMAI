@@ -1923,6 +1923,12 @@ input[type="range"] {
   line-height: 1.5;
 }
 
+.home-prahar-title {
+  color: var(--muted);
+  font-size: 0.76em;
+  font-weight: 600;
+}
+
 .bottom-nav {
   position: fixed;
   left: 12px;

@@ -5,12 +5,12 @@ import { fetchAccessibleRaags } from './raag-data.js';
 const localTime = document.getElementById('homeLocalTime');
 const timeZone = document.getElementById('homeTimeZone');
 const praharLabel = document.getElementById('homePraharLabel');
+const currentPraharTitle = document.getElementById('homeCurrentPrahar');
 const status = document.getElementById('homePraharStatus');
 const recommendationList = document.getElementById('homePraharRecommendations');
 const ordinalNames = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
 
 let accessibleRaags = [];
-let isAdminViewer = false;
 
 function getPraharContext(date = new Date()) {
   const localMinutes = date.getHours() * 60 + date.getMinutes();
@@ -46,6 +46,7 @@ function renderRecommendations() {
   localTime.textContent = context.time;
   timeZone.textContent = context.zone;
   praharLabel.textContent = `${context.label} · ${context.range}`;
+  currentPraharTitle.textContent = context.label;
   recommendationList.replaceChildren();
 
   const praharMatches = accessibleRaags.filter((raag) => getRaagPrahars(raag).numbers.has(context.number));
@@ -54,9 +55,7 @@ function renderRecommendations() {
   const matches = [...praharMatches, ...allTimeMatches];
 
   if (!matches.length) {
-    status.textContent = isAdminViewer
-      ? `No imported Raag records match ${context.label}; missing or seasonal time labels are not guessed.`
-      : `No reviewed Raags are published for ${context.label} yet.`;
+    status.textContent = `No Raags are tagged for ${context.label} yet; missing or seasonal time labels are not guessed.`;
     return;
   }
 
@@ -64,21 +63,18 @@ function renderRecommendations() {
     praharMatches.length ? `${praharMatches.length} for ${context.label}` : '',
     allTimeMatches.length ? `${allTimeMatches.length} all-time` : ''
   ].filter(Boolean).join(' · ');
-  status.textContent = `${recommendationSummary} Raag recommendations in ${context.zone}${isAdminViewer ? '; source candidates are marked below.' : '.'}`;
+  status.textContent = `${recommendationSummary} Raag recommendations in ${context.zone}.`;
   matches.forEach((raag) => {
     const item = document.createElement('article');
     item.className = 'mini-card';
     const copy = document.createElement('div');
     const name = document.createElement('strong');
     name.textContent = raag.name || 'Unnamed source record';
-    const source = document.createElement('span');
-    const timeText = String(raag.timeOfDay || '');
-    source.textContent = [
-      raag.thaat ? `${raag.thaat} thaat` : '',
-      timeText || `${context.label} (local-time estimate)`,
-      raag.isPublished === true ? 'Published' : `Source candidate · ${raag.sourceName || 'Unverified source'}`
-    ].filter(Boolean).join(' · ');
-    copy.append(name, source);
+    const details = document.createElement('span');
+    const raagPrahar = getRaagPrahars(raag);
+    const displayedPrahar = raagPrahar.numbers.has(context.number) ? context.label : 'All Prahars';
+    details.textContent = `${raag.thaat ? `Thaat: ${raag.thaat}` : 'Thaat not recorded'} · Prahar: ${displayedPrahar}`;
+    copy.append(name, details);
     const link = document.createElement('a');
     link.className = 'chip accent';
     link.href = openRaagHref(raag);
@@ -92,7 +88,6 @@ onAuthStateChanged(auth, async (user) => {
   try {
     const result = await fetchAccessibleRaags(user);
     accessibleRaags = result.raags;
-    isAdminViewer = result.isAdmin;
     renderRecommendations();
   } catch (error) {
     accessibleRaags = [];
