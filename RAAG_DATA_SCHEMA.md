@@ -85,6 +85,8 @@ Composition-level material is stored separately from Raag descriptions in the ad
 
 The Data Lab at `hcmai-dev.web.app/data-lab.html` lets an administrator select a dataset, inspect its manifest and label counts, search and page through records, view numeric feature summaries, inspect a complete record, and export the selected dataset as JSON. Uploads require a `user-confirmed` permission status and write only to the matching dataset path.
 
+Administrators can edit a selected composition or raw-source record in place from its detail panel. The UI displays the Firestore document ID and `sourceRecordId` as locked identifiers; the JSON editor omits both and restores the existing source ID on save. Saving replaces fields on the same Firestore document path, so references and stable IDs remain unchanged. Invalid JSON, attempts to edit IDs, and nested arrays (which Firestore rejects) are blocked with an error. Save requires a freshly checked admin claim and is also enforced by Firestore rules.
+
 Regenerate bundles with `tools/build-composition-datasets.ps1`. The script pins the two Git revisions and produces three independent files under `.firebase/`:
 
 | Dataset ID | Rows | Record shape |

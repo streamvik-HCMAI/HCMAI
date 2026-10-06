@@ -86,6 +86,13 @@
             <button id="compositionNextPage" class="secondary-btn small" type="button">Next</button>
           </div>
           <h3>Selected record</h3>
+          <p id="compositionRecordIdentity" class="dataset-row-count">No record selected.</p>
+          <div class="dataset-editor-actions">
+            <button id="editCompositionRecord" class="secondary-btn small" type="button" disabled>Edit fields</button>
+            <button id="saveCompositionRecord" class="primary-btn small" type="button" hidden>Save changes</button>
+            <button id="cancelCompositionRecordEdit" class="secondary-btn small" type="button" hidden>Cancel</button>
+          </div>
+          <textarea id="compositionRecordEditor" class="dataset-record-editor" spellcheck="false" aria-label="Edit composition record fields" hidden></textarea>
           <pre id="compositionRecordDetail" class="dataset-record-detail">Select a row to inspect its fields.</pre>
         </section>
       </section>
@@ -119,6 +126,13 @@
             <button id="sourceNextPage" class="secondary-btn small" type="button">Next</button>
           </div>
           <h3>Selected source record</h3>
+          <p id="sourceRecordIdentity" class="dataset-row-count">No record selected.</p>
+          <div class="dataset-editor-actions">
+            <button id="editSourceRecord" class="secondary-btn small" type="button" disabled>Edit fields</button>
+            <button id="saveSourceRecord" class="primary-btn small" type="button" hidden>Save changes</button>
+            <button id="cancelSourceRecordEdit" class="secondary-btn small" type="button" hidden>Cancel</button>
+          </div>
+          <textarea id="sourceRecordEditor" class="dataset-record-editor" spellcheck="false" aria-label="Edit raw source record fields" hidden></textarea>
           <pre id="sourceRecordDetail" class="dataset-record-detail">Select a row to inspect its source fields.</pre>
         </section>
       </section>
@@ -129,6 +143,6 @@
     </footer>
     <script src="js/main.js"></script>
     <script type="module" src="js/auth.js"></script>
-    <script type="module" src="js/data-lab.js?v=20261004-v2"></script>
+    <script type="module" src="js/data-lab.js?v=20261006-editor-v2"></script>
   </body>
 </html>

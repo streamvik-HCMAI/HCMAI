@@ -17,6 +17,11 @@ const table = document.getElementById('compositionRecordsTable');
 const rowCount = document.getElementById('compositionRowCount');
 const pageLabel = document.getElementById('compositionPageLabel');
 const detail = document.getElementById('compositionRecordDetail');
+const compositionRecordIdentity = document.getElementById('compositionRecordIdentity');
+const editCompositionButton = document.getElementById('editCompositionRecord');
+const saveCompositionButton = document.getElementById('saveCompositionRecord');
+const cancelCompositionButton = document.getElementById('cancelCompositionRecordEdit');
+const compositionEditor = document.getElementById('compositionRecordEditor');
 const previousButton = document.getElementById('compositionPreviousPage');
 const nextButton = document.getElementById('compositionNextPage');
 const compositionLab = document.getElementById('compositionLab');
@@ -31,12 +36,20 @@ const sourcePreviousButton = document.getElementById('sourcePreviousPage');
 const sourceNextButton = document.getElementById('sourceNextPage');
 const sourcePageLabel = document.getElementById('sourcePageLabel');
 const sourceDetail = document.getElementById('sourceRecordDetail');
+const sourceRecordIdentity = document.getElementById('sourceRecordIdentity');
+const editSourceButton = document.getElementById('editSourceRecord');
+const saveSourceButton = document.getElementById('saveSourceRecord');
+const cancelSourceButton = document.getElementById('cancelSourceRecordEdit');
+const sourceEditor = document.getElementById('sourceRecordEditor');
 
 let manifests = [];
 let records = [];
 let filteredRecords = [];
 let currentManifest = null;
 let currentPage = 0;
+let selectedCompositionRecordId = '';
+let selectedCompositionSourceRecordId = '';
+let selectedSourceDocument = null;
 const sourcePageSize = 50;
 let sourcePage = 0;
 let sourcePageCursors = [null];
@@ -60,6 +73,44 @@ function formatValue(value) {
   if (Array.isArray(value)) return value.map(formatValue).join(' | ');
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
+}
+
+function toEditableJson(record) {
+  const editable = { ...record };
+  delete editable.id;
+  delete editable.sourceRecordId;
+  return JSON.stringify(editable, null, 2);
+}
+
+function parseEditableRecord(text, immutableSourceRecordId) {
+  const value = JSON.parse(text);
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Record fields must be a JSON object.');
+  }
+  if (Object.hasOwn(value, 'id') || Object.hasOwn(value, 'sourceRecordId')) {
+    throw new Error('Record IDs are locked and cannot be changed here.');
+  }
+  const checkArrays = (item, insideArray = false, path = 'record') => {
+    if (Array.isArray(item)) {
+      if (insideArray) throw new Error(`${path} contains nested arrays, which Firestore does not support.`);
+      item.forEach((child, index) => checkArrays(child, true, `${path}[${index}]`));
+      return;
+    }
+    if (item && typeof item === 'object') {
+      Object.entries(item).forEach(([key, child]) => checkArrays(child, false, `${path}.${key}`));
+    }
+  };
+  checkArrays(value);
+  if (immutableSourceRecordId) value.sourceRecordId = immutableSourceRecordId;
+  return value;
+}
+
+function setEditorMode(editor, detailPanel, editButton, saveButton, cancelButton, editing) {
+  editor.hidden = !editing;
+  detailPanel.hidden = editing;
+  editButton.hidden = editing;
+  saveButton.hidden = !editing;
+  cancelButton.hidden = !editing;
 }
 
 function datasetColumns(manifest) {
@@ -165,6 +216,12 @@ function renderRows() {
     const selectRow = () => {
       body.querySelectorAll('tr').forEach((otherRow) => otherRow.setAttribute('aria-selected', 'false'));
       row.setAttribute('aria-selected', 'true');
+      selectedCompositionRecordId = record.id;
+      selectedCompositionSourceRecordId = record.sourceRecordId || '';
+      compositionRecordIdentity.textContent = `Document ID: ${record.id}${selectedCompositionSourceRecordId ? ` · Source ID: ${selectedCompositionSourceRecordId}` : ''}`;
+      editCompositionButton.disabled = false;
+      compositionEditor.value = toEditableJson(record);
+      setEditorMode(compositionEditor, detail, editCompositionButton, saveCompositionButton, cancelCompositionButton, false);
       detail.textContent = JSON.stringify(record, null, 2);
     };
     row.addEventListener('click', selectRow);
@@ -195,6 +252,11 @@ async function loadDataset(datasetId) {
   renderMeta(currentManifest);
   renderStats(currentManifest);
   searchInput.value = '';
+  selectedCompositionRecordId = '';
+  selectedCompositionSourceRecordId = '';
+  compositionRecordIdentity.textContent = 'No record selected.';
+  editCompositionButton.disabled = true;
+  setEditorMode(compositionEditor, detail, editCompositionButton, saveCompositionButton, cancelCompositionButton, false);
   filteredRecords = [...records];
   currentPage = 0;
   renderRows();
@@ -249,7 +311,13 @@ function renderSourceRows() {
     const selectRow = () => {
       body.querySelectorAll('tr').forEach((otherRow) => otherRow.setAttribute('aria-selected', 'false'));
       row.setAttribute('aria-selected', 'true');
-      sourceDetail.textContent = JSON.stringify({ id: recordDocument.id, ...record }, null, 2);
+      selectedSourceDocument = recordDocument;
+      const sourceRecord = { id: recordDocument.id, ...record };
+      sourceRecordIdentity.textContent = `Document ID: ${recordDocument.id} · Source ID: ${record.sourceRecordId || 'not recorded'}`;
+      editSourceButton.disabled = false;
+      sourceEditor.value = toEditableJson(sourceRecord);
+      setEditorMode(sourceEditor, sourceDetail, editSourceButton, saveSourceButton, cancelSourceButton, false);
+      sourceDetail.textContent = JSON.stringify(sourceRecord, null, 2);
     };
     row.addEventListener('click', selectRow);
     row.addEventListener('keydown', (event) => {
@@ -274,6 +342,10 @@ async function loadSourcePage({ reset = false } = {}) {
     sourcePage = 0;
     sourcePageCursors = [null];
   }
+  selectedSourceDocument = null;
+  sourceRecordIdentity.textContent = 'No record selected.';
+  editSourceButton.disabled = true;
+  setEditorMode(sourceEditor, sourceDetail, editSourceButton, saveSourceButton, cancelSourceButton, false);
   setStatus('Loading raw source records...');
   const prefix = sourcePrefixes[sourceFilter.value] || '';
   const filters = prefix
@@ -355,6 +427,13 @@ async function initialize(user) {
   }
 }
 
+async function requireAdminForEdit() {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Sign in as an administrator to edit records.');
+  const token = await user.getIdTokenResult(true);
+  if (token.claims.admin !== true) throw new Error('Administrator permission is required to edit records.');
+}
+
 datasetSelect.addEventListener('change', () => loadDataset(datasetSelect.value).catch((error) => setStatus(error.message)));
 compositionTab.addEventListener('click', () => showDataTab('compositions'));
 sourceRecordsTab.addEventListener('click', () => showDataTab('sources'));
@@ -371,6 +450,68 @@ sourceNextButton.addEventListener('click', () => {
 searchInput.addEventListener('input', applySearch);
 previousButton.addEventListener('click', () => { currentPage = Math.max(0, currentPage - 1); renderRows(); });
 nextButton.addEventListener('click', () => { currentPage += 1; renderRows(); });
+
+editCompositionButton.addEventListener('click', () => {
+  if (!selectedCompositionRecordId) return;
+  setEditorMode(compositionEditor, detail, editCompositionButton, saveCompositionButton, cancelCompositionButton, true);
+  compositionEditor.focus();
+});
+cancelCompositionButton.addEventListener('click', () => {
+  const record = records.find((item) => item.id === selectedCompositionRecordId);
+  if (record) {
+    compositionEditor.value = toEditableJson(record);
+    detail.textContent = JSON.stringify(record, null, 2);
+  }
+  setEditorMode(compositionEditor, detail, editCompositionButton, saveCompositionButton, cancelCompositionButton, false);
+});
+saveCompositionButton.addEventListener('click', async () => {
+  if (!selectedCompositionRecordId || !currentManifest) return;
+  saveCompositionButton.disabled = true;
+  try {
+    await requireAdminForEdit();
+    const recordId = selectedCompositionRecordId;
+    const datasetId = currentManifest.datasetId;
+    const update = parseEditableRecord(compositionEditor.value, selectedCompositionSourceRecordId);
+    await setDoc(doc(db, 'compositionDatasets', datasetId, 'records', recordId), update);
+    await loadDataset(datasetId);
+    setStatus(`Saved record ${recordId}; its document ID was preserved.`);
+  } catch (error) {
+    setStatus(error.message || 'Composition record could not be saved.');
+  } finally {
+    saveCompositionButton.disabled = false;
+  }
+});
+
+editSourceButton.addEventListener('click', () => {
+  if (!selectedSourceDocument) return;
+  setEditorMode(sourceEditor, sourceDetail, editSourceButton, saveSourceButton, cancelSourceButton, true);
+  sourceEditor.focus();
+});
+cancelSourceButton.addEventListener('click', () => {
+  if (selectedSourceDocument) {
+    const record = { id: selectedSourceDocument.id, ...selectedSourceDocument.data() };
+    sourceEditor.value = toEditableJson(record);
+    sourceDetail.textContent = JSON.stringify(record, null, 2);
+  }
+  setEditorMode(sourceEditor, sourceDetail, editSourceButton, saveSourceButton, cancelSourceButton, false);
+});
+saveSourceButton.addEventListener('click', async () => {
+  if (!selectedSourceDocument) return;
+  saveSourceButton.disabled = true;
+  try {
+    await requireAdminForEdit();
+    const originalSourceId = selectedSourceDocument.data().sourceRecordId || '';
+    const update = parseEditableRecord(sourceEditor.value, originalSourceId);
+    await setDoc(selectedSourceDocument.ref, update);
+    const recordId = selectedSourceDocument.id;
+    await loadSourcePage();
+    setStatus(`Saved source record ${recordId}; its document ID was preserved.`);
+  } catch (error) {
+    setStatus(error.message || 'Source record could not be saved.');
+  } finally {
+    saveSourceButton.disabled = false;
+  }
+});
 
 importButton.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', async () => {

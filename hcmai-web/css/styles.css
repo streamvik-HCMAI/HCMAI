@@ -765,6 +765,38 @@ h1, h2, h3, h4, p {
   overflow-wrap: anywhere;
 }
 
+.dataset-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.dataset-record-editor {
+  display: block;
+  width: 100%;
+  min-height: 280px;
+  max-height: 65vh;
+  margin: 8px 0;
+  padding: 12px;
+  resize: vertical;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  font: 0.78rem/1.5 "JetBrains Mono", monospace;
+  white-space: pre;
+}
+
+.dataset-record-editor[hidden] {
+  display: none;
+}
+
+.dataset-record-editor[hidden],
+.dataset-editor-actions [hidden] {
+  display: none;
+}
+
 @media (max-width: 760px) {
   .composition-lab:not([hidden]) {
     grid-template-columns: minmax(0, 1fr);
