@@ -531,7 +531,7 @@ if (
   clipLocalAudio.addEventListener('error', () => {
     if (activeClipSource !== 'audio') return;
     stopClipPlayback();
-    setClipStatus('This audio file could not be played. Try MP3, WAV, M4A, or OGG.');
+    setClipStatus('This file could not be played. Try MP3, WAV, M4A, OGG, or an MP4/MOV video.');
   });
 
   const loadLocalAudio = (blob, label, { savedLoopId = '', bounds = null } = {}) => {
@@ -604,8 +604,8 @@ if (
   clipAudioFile.addEventListener('change', () => {
     const file = clipAudioFile.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('audio/') && !/\.(mp3|wav|m4a|ogg|opus|aac|flac)$/i.test(file.name)) {
-      setClipStatus('Choose a supported audio file.');
+    if (!file.type.startsWith('audio/') && !file.type.startsWith('video/') && !/\.(mp3|wav|m4a|ogg|opus|aac|flac|mp4|mov|m4v|webm|3gp)$/i.test(file.name)) {
+      setClipStatus('Choose a supported audio or video file.');
       clipAudioFileName.textContent = '';
       clipAudioFile.value = '';
       return;
@@ -785,7 +785,7 @@ if (
       }
     } catch (error) {
       console.error('Unable to save loop.', error);
-      setClipStatus(isAudio ? 'The audio loop could not be saved. Try a shorter clip or check your connection.' : 'The loop could not be saved. Try again.');
+      setClipStatus(isAudio ? 'The audio loop could not be saved. The browser may not be able to read this file, or the connection failed.' : 'The loop could not be saved. Try again.');
       return;
     } finally {
       updateSaveYouTubeLoopButton();
