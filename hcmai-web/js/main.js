@@ -86,6 +86,10 @@ const savedYouTubeLoopsList = document.getElementById('savedYouTubeLoops');
 const youtubeSavedControls = document.getElementById('youtubeSavedControls');
 const savedClipName = document.getElementById('savedClipName');
 const saveYouTubeLoopButton = document.getElementById('saveYouTubeLoop');
+const savedSongName = document.getElementById('savedSongName');
+const savedRaagName = document.getElementById('savedRaagName');
+const savedNotes = document.getElementById('savedNotes');
+const saveDetails = document.querySelector('.clip-save-details');
 
 if (
   clipVideoForm && clipVideoUrl && clipLoadButton && clipAudioFile && clipAudioFileName && clipWorkspace && clipYoutubeFrame && clipLocalAudio &&
@@ -213,6 +217,18 @@ if (
         ? `Audio clip ${formatClipTime(loop.endSeconds - loop.startSeconds)}${loop.sourceName ? ` from ${loop.sourceName}` : ''}`
         : `YouTube clip ${formatClipTime(loop.startSeconds)} - ${formatClipTime(loop.endSeconds)}`;
       details.append(name, boundaries);
+      const metaText = [loop.songName, loop.raagName && `Raag ${loop.raagName}`].filter(Boolean).join(' · ');
+      if (metaText) {
+        const meta = document.createElement('span');
+        meta.textContent = metaText;
+        details.append(meta);
+      }
+      if (loop.notes) {
+        const notes = document.createElement('p');
+        notes.className = 'saved-loop-notes';
+        notes.textContent = loop.notes;
+        details.append(notes);
+      }
 
       const actions = document.createElement('div');
       actions.className = 'saved-loop-actions';
@@ -612,6 +628,7 @@ if (
     }
 
     savedClipName.value = '';
+    fillLoopDetails();
     loadLocalAudio(file, file.name);
     clipAudioFile.value = '';
   });
@@ -661,8 +678,16 @@ if (
     }
 
     savedClipName.value = '';
+    fillLoopDetails();
     await loadYouTubeClip(videoId);
   });
+
+  const fillLoopDetails = (loop = {}) => {
+    savedSongName.value = loop.songName || '';
+    savedRaagName.value = loop.raagName || '';
+    savedNotes.value = loop.notes || '';
+    if (saveDetails) saveDetails.open = Boolean(loop.songName || loop.raagName || loop.notes);
+  };
 
   const persistLoopList = () => {
     savedYouTubeLoops.sort((left, right) => (right.lastPracticedAt || right.updatedAt || 0) - (left.lastPracticedAt || left.updatedAt || 0));
@@ -702,6 +727,7 @@ if (
     else persistSavedYouTubeLoops();
     persistLoopList();
     savedClipName.value = savedLoop.name;
+    fillLoopDetails(savedLoop);
 
     if (savedLoop.sourceType === 'audio') {
       button.disabled = true;
@@ -756,6 +782,9 @@ if (
       id: existingLoop?.id || (window.crypto?.randomUUID?.() ?? `${now}-${Math.random().toString(36).slice(2)}`),
       name,
       sourceType: isAudio ? 'audio' : 'youtube',
+      songName: savedSongName.value.trim().slice(0, 100),
+      raagName: savedRaagName.value.trim().slice(0, 60),
+      notes: savedNotes.value.trim().slice(0, 5000),
       createdAt: existingLoop?.createdAt || now,
       updatedAt: now,
       lastPracticedAt: existingLoop?.lastPracticedAt || now
