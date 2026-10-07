@@ -89,6 +89,11 @@ const saveYouTubeLoopButton = document.getElementById('saveYouTubeLoop');
 const savedSongName = document.getElementById('savedSongName');
 const savedRaagName = document.getElementById('savedRaagName');
 const savedNotes = document.getElementById('savedNotes');
+const savedArtist = document.getElementById('savedArtist');
+const savedTaal = document.getElementById('savedTaal');
+const savedLaya = document.getElementById('savedLaya');
+const savedSection = document.getElementById('savedSection');
+const savedTags = document.getElementById('savedTags');
 const saveDetails = document.querySelector('.clip-save-details');
 
 if (
@@ -217,11 +222,23 @@ if (
         ? `Audio clip ${formatClipTime(loop.endSeconds - loop.startSeconds)}${loop.sourceName ? ` from ${loop.sourceName}` : ''}`
         : `YouTube clip ${formatClipTime(loop.startSeconds)} - ${formatClipTime(loop.endSeconds)}`;
       details.append(name, boundaries);
-      const metaText = [loop.songName, loop.raagName && `Raag ${loop.raagName}`].filter(Boolean).join(' · ');
+      const metaText = [
+        loop.songName,
+        loop.raagName && `Raag ${loop.raagName}`,
+        loop.artist,
+        loop.taal && `${loop.taal}${loop.laya ? ` (${loop.laya})` : ''}`,
+        !loop.taal && loop.laya,
+        loop.section
+      ].filter(Boolean).join(' · ');
       if (metaText) {
         const meta = document.createElement('span');
         meta.textContent = metaText;
         details.append(meta);
+      }
+      if (Array.isArray(loop.tags) && loop.tags.length) {
+        const tags = document.createElement('span');
+        tags.textContent = loop.tags.map((tag) => `#${tag}`).join(' ');
+        details.append(tags);
       }
       if (loop.notes) {
         const notes = document.createElement('p');
@@ -686,7 +703,15 @@ if (
     savedSongName.value = loop.songName || '';
     savedRaagName.value = loop.raagName || '';
     savedNotes.value = loop.notes || '';
-    if (saveDetails) saveDetails.open = Boolean(loop.songName || loop.raagName || loop.notes);
+    savedArtist.value = loop.artist || '';
+    savedTaal.value = loop.taal || '';
+    savedLaya.value = loop.laya || '';
+    savedSection.value = loop.section || '';
+    savedTags.value = Array.isArray(loop.tags) ? loop.tags.join(', ') : '';
+    if (saveDetails) {
+      saveDetails.open = Boolean(loop.songName || loop.raagName || loop.notes || loop.artist
+        || loop.taal || loop.laya || loop.section || (loop.tags && loop.tags.length));
+    }
   };
 
   const persistLoopList = () => {
@@ -785,6 +810,11 @@ if (
       songName: savedSongName.value.trim().slice(0, 100),
       raagName: savedRaagName.value.trim().slice(0, 60),
       notes: savedNotes.value.trim().slice(0, 5000),
+      artist: savedArtist.value.trim().slice(0, 100),
+      taal: savedTaal.value.trim().slice(0, 40),
+      laya: savedLaya.value,
+      section: savedSection.value,
+      tags: [...new Set(savedTags.value.split(',').map((tag) => tag.trim().replace(/^#/, '').slice(0, 30)).filter(Boolean))].slice(0, 10),
       createdAt: existingLoop?.createdAt || now,
       updatedAt: now,
       lastPracticedAt: existingLoop?.lastPracticedAt || now

@@ -43,7 +43,12 @@ service cloud.firestore {
         && request.resource.data.sourceType in ['youtube', 'audio']
         && request.resource.data.get('songName', '').size() <= 100
         && request.resource.data.get('raagName', '').size() <= 60
-        && request.resource.data.get('notes', '').size() <= 5000;
+        && request.resource.data.get('notes', '').size() <= 5000
+        && request.resource.data.get('artist', '').size() <= 100
+        && request.resource.data.get('taal', '').size() <= 40
+        && request.resource.data.get('laya', '') in ['', 'vilambit', 'madhya', 'drut']
+        && request.resource.data.get('section', '') in ['', 'alaap', 'sthayi', 'antara', 'taan', 'other']
+        && request.resource.data.get('tags', []).size() <= 10;
     }
 
     match /raagSourceRecords/{recordId} {
