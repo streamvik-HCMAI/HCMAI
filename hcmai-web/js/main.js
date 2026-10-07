@@ -107,6 +107,13 @@ if (
   const legacySavedLoopsStorageKey = 'hcmai.practice.saved-youtube-loops.v1';
   let savedLoopsStorageKey = `${savedLoopsStoragePrefix}guest`;
   let savedLoopsOwnerInitialized = false;
+  let currentUid = null;
+  let localAudioBlob = null;
+  let localAudioName = '';
+  let pendingAudioBounds = null;
+  const maxSavedAudioSeconds = 60;
+  const cloudApi = () => window.hcmaiCloudLoops || null;
+  const usingCloud = () => Boolean(currentUid && cloudApi());
 
   const setClipStatus = (message) => {
     clipStatus.textContent = message;
@@ -202,7 +209,9 @@ if (
       const name = document.createElement('strong');
       name.textContent = loop.name;
       const boundaries = document.createElement('span');
-      boundaries.textContent = `YouTube clip ${formatClipTime(loop.startSeconds)} - ${formatClipTime(loop.endSeconds)}`;
+      boundaries.textContent = loop.sourceType === 'audio'
+        ? `Audio clip ${formatClipTime(loop.endSeconds - loop.startSeconds)}${loop.sourceName ? ` from ${loop.sourceName}` : ''}`
+        : `YouTube clip ${formatClipTime(loop.startSeconds)} - ${formatClipTime(loop.endSeconds)}`;
       details.append(name, boundaries);
 
       const actions = document.createElement('div');
@@ -229,9 +238,11 @@ if (
 
   const switchSavedLoopOwner = (uid) => {
     const ownerKey = uid || 'guest';
+    currentUid = uid;
     const nextStorageKey = `${savedLoopsStoragePrefix}${ownerKey}`;
     if (nextStorageKey === savedLoopsStorageKey) {
       savedLoopsOwnerInitialized = true;
+      refreshCloudLoops();
       return;
     }
 
@@ -247,9 +258,12 @@ if (
       }
     }
 
-    if (savedLoopsOwnerInitialized && !savedLoopsStorageKey.endsWith(':guest') && activeClipSource === 'youtube') {
+    if (savedLoopsOwnerInitialized && !savedLoopsStorageKey.endsWith(':guest') && activeClipSource) {
       stopClipPlayback();
       youtubePlayer?.stopVideo?.();
+      releaseLocalClip();
+      localAudioBlob = null;
+      clipAudioFileName.textContent = '';
       activeClipSource = '';
       currentVideoId = '';
       clipWorkspace.hidden = true;
@@ -263,7 +277,36 @@ if (
     savedLoopsOwnerInitialized = true;
     savedYouTubeLoops = readSavedYouTubeLoops();
     renderSavedYouTubeLoops();
+    refreshCloudLoops();
   };
+
+  const migrateLocalLoopsToCloud = async () => {
+    const localLoops = readSavedYouTubeLoops();
+    if (!localLoops.length) return;
+    for (const loop of localLoops) {
+      await cloudApi().save({ ...loop, sourceType: 'youtube' });
+    }
+    try {
+      window.localStorage.removeItem(savedLoopsStorageKey);
+    } catch {
+      // The account copy is saved; a leftover local copy is harmless.
+    }
+  };
+
+  async function refreshCloudLoops() {
+    if (!usingCloud()) return;
+    const uid = currentUid;
+    try {
+      await migrateLocalLoopsToCloud();
+      const loops = await cloudApi().list();
+      if (uid !== currentUid) return;
+      savedYouTubeLoops = loops;
+      renderSavedYouTubeLoops();
+    } catch (error) {
+      console.error('Unable to load saved loops from your account.', error);
+      setClipStatus('Saved loops could not be loaded from your account.');
+    }
+  }
 
   const getClipDuration = () => activeClipSource === 'audio'
     ? clipLocalAudio.duration
@@ -366,7 +409,8 @@ if (
   };
 
   const updateSaveYouTubeLoopButton = () => {
-    saveYouTubeLoopButton.disabled = activeClipSource !== 'youtube' || !playerIsReady || !readClipBounds();
+    const sourceReady = activeClipSource === 'audio' || (activeClipSource === 'youtube' && playerIsReady);
+    saveYouTubeLoopButton.disabled = !sourceReady || !readClipBounds();
     saveYouTubeLoopButton.textContent = selectedSavedLoopId ? 'Update saved loop' : 'Save loop';
   };
 
@@ -458,10 +502,12 @@ if (
   clipLocalAudio.addEventListener('loadedmetadata', () => {
     if (activeClipSource !== 'audio') return;
     const duration = Math.floor(clipLocalAudio.duration);
-    clipStartTime.value = '0:00';
-    clipEndTime.value = formatClipTime(Math.min(10, Math.max(1, duration)));
+    clipStartTime.value = formatClipTime(pendingAudioBounds?.start ?? 0);
+    clipEndTime.value = formatClipTime(pendingAudioBounds?.end ?? Math.min(10, Math.max(1, duration)));
+    pendingAudioBounds = null;
     enableClipControls();
     updateClipDurationHint();
+    updateSaveYouTubeLoopButton();
     startClipClock();
     setClipStatus('Audio ready. Set the clip boundaries, then play the loop.');
   });
@@ -488,6 +534,73 @@ if (
     setClipStatus('This audio file could not be played. Try MP3, WAV, M4A, or OGG.');
   });
 
+  const loadLocalAudio = (blob, label, { savedLoopId = '', bounds = null } = {}) => {
+    stopClipPlayback();
+    activeClipSource = '';
+    selectedSavedLoopId = savedLoopId;
+    releaseLocalClip();
+    activeClipSource = 'audio';
+    localAudioBlob = blob;
+    localAudioName = label;
+    pendingAudioBounds = bounds;
+    youtubeSavedControls.hidden = false;
+    clipYoutubeFrame.hidden = true;
+    clipLocalAudio.hidden = false;
+    clipWorkspace.hidden = false;
+    clipFallbackLink.hidden = true;
+    clipAudioFileName.textContent = label;
+    setClipStatus('Loading audio...');
+    localClipObjectUrl = URL.createObjectURL(blob);
+    clipLocalAudio.src = localClipObjectUrl;
+    updateSaveYouTubeLoopButton();
+  };
+
+  const encodeWavClip = async (blob, startSeconds, endSeconds) => {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) throw new Error('This browser cannot prepare audio clips.');
+    const context = new AudioContextClass();
+    let decoded;
+    try {
+      decoded = await context.decodeAudioData(await blob.arrayBuffer());
+    } finally {
+      context.close?.();
+    }
+
+    const sampleRate = decoded.sampleRate;
+    const first = Math.floor(startSeconds * sampleRate);
+    const last = Math.min(decoded.length, Math.ceil(endSeconds * sampleRate));
+    const frames = last - first;
+    const channels = Math.min(2, decoded.numberOfChannels);
+    if (frames <= 0) throw new Error('The selected clip is empty.');
+
+    const buffer = new ArrayBuffer(44 + frames * channels * 2);
+    const view = new DataView(buffer);
+    const writeText = (offset, text) => [...text].forEach((char, index) => view.setUint8(offset + index, char.charCodeAt(0)));
+    writeText(0, 'RIFF');
+    view.setUint32(4, 36 + frames * channels * 2, true);
+    writeText(8, 'WAVEfmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, channels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * channels * 2, true);
+    view.setUint16(32, channels * 2, true);
+    view.setUint16(34, 16, true);
+    writeText(36, 'data');
+    view.setUint32(40, frames * channels * 2, true);
+
+    const channelData = Array.from({ length: channels }, (_, index) => decoded.getChannelData(index));
+    let offset = 44;
+    for (let frame = 0; frame < frames; frame += 1) {
+      for (let channel = 0; channel < channels; channel += 1) {
+        const sample = Math.max(-1, Math.min(1, channelData[channel][first + frame]));
+        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+        offset += 2;
+      }
+    }
+    return { blob: new Blob([buffer], { type: 'audio/wav' }), duration: Math.round(frames / sampleRate) };
+  };
+
   clipAudioFile.addEventListener('change', () => {
     const file = clipAudioFile.files?.[0];
     if (!file) return;
@@ -498,20 +611,8 @@ if (
       return;
     }
 
-    stopClipPlayback();
-    activeClipSource = '';
-    selectedSavedLoopId = '';
-    youtubeSavedControls.hidden = true;
-    releaseLocalClip();
-    activeClipSource = 'audio';
-    clipYoutubeFrame.hidden = true;
-    clipLocalAudio.hidden = false;
-    clipWorkspace.hidden = false;
-    clipFallbackLink.hidden = true;
-    clipAudioFileName.textContent = file.name;
-    setClipStatus('Loading audio file...');
-    localClipObjectUrl = URL.createObjectURL(file);
-    clipLocalAudio.src = localClipObjectUrl;
+    savedClipName.value = '';
+    loadLocalAudio(file, file.name);
     clipAudioFile.value = '';
   });
 
@@ -526,6 +627,7 @@ if (
     stopClipPlayback();
     activeClipSource = '';
     releaseLocalClip();
+    localAudioBlob = null;
     activeClipSource = 'youtube';
     youtubeSavedControls.hidden = false;
     clipYoutubeFrame.hidden = false;
@@ -562,6 +664,11 @@ if (
     await loadYouTubeClip(videoId);
   });
 
+  const persistLoopList = () => {
+    savedYouTubeLoops.sort((left, right) => (right.lastPracticedAt || right.updatedAt || 0) - (left.lastPracticedAt || left.updatedAt || 0));
+    renderSavedYouTubeLoops();
+  };
+
   savedYouTubeLoopsList.addEventListener('click', async (event) => {
     const button = event.target.closest('button[data-saved-loop-action]');
     if (!button) return;
@@ -569,8 +676,18 @@ if (
     if (!savedLoop) return;
 
     if (button.dataset.savedLoopAction === 'delete') {
+      try {
+        if (usingCloud()) await cloudApi().remove(savedLoop);
+        else {
+          savedYouTubeLoops = savedYouTubeLoops.filter((loop) => loop.id !== savedLoop.id);
+          if (!persistSavedYouTubeLoops()) return;
+        }
+      } catch (error) {
+        console.error('Unable to delete saved loop.', error);
+        setClipStatus('This loop could not be deleted. Try again.');
+        return;
+      }
       savedYouTubeLoops = savedYouTubeLoops.filter((loop) => loop.id !== savedLoop.id);
-      if (!persistSavedYouTubeLoops()) return;
       if (selectedSavedLoopId === savedLoop.id) {
         selectedSavedLoopId = '';
         updateSaveYouTubeLoopButton();
@@ -581,11 +698,31 @@ if (
     }
 
     savedLoop.lastPracticedAt = Date.now();
-    savedYouTubeLoops.sort((left, right) => (right.lastPracticedAt || right.updatedAt || 0) - (left.lastPracticedAt || left.updatedAt || 0));
-    persistSavedYouTubeLoops();
-    renderSavedYouTubeLoops();
-    clipVideoUrl.value = `https://www.youtube.com/watch?v=${savedLoop.videoId}`;
+    if (usingCloud()) cloudApi().touch(savedLoop.id, savedLoop.lastPracticedAt).catch(() => {});
+    else persistSavedYouTubeLoops();
+    persistLoopList();
     savedClipName.value = savedLoop.name;
+
+    if (savedLoop.sourceType === 'audio') {
+      button.disabled = true;
+      setClipStatus('Loading saved audio...');
+      try {
+        const audioBlob = await cloudApi().getAudioBlob(savedLoop);
+        clipVideoUrl.value = '';
+        loadLocalAudio(audioBlob, savedLoop.name, {
+          savedLoopId: savedLoop.id,
+          bounds: { start: 0, end: savedLoop.endSeconds - savedLoop.startSeconds }
+        });
+      } catch (error) {
+        console.error('Unable to load saved audio loop.', error);
+        setClipStatus('The saved audio could not be loaded. Check your connection and try again.');
+      } finally {
+        button.disabled = false;
+      }
+      return;
+    }
+
+    clipVideoUrl.value = `https://www.youtube.com/watch?v=${savedLoop.videoId}`;
     await loadYouTubeClip(savedLoop.videoId, {
       startSeconds: savedLoop.startSeconds,
       endSeconds: savedLoop.endSeconds,
@@ -593,10 +730,20 @@ if (
     });
   });
 
-  saveYouTubeLoopButton.addEventListener('click', () => {
+  saveYouTubeLoopButton.addEventListener('click', async () => {
     const bounds = readClipBounds();
-    if (activeClipSource !== 'youtube' || !bounds) {
+    if (!activeClipSource || !bounds) {
       setClipStatus('Set valid start and end times before saving this loop.');
+      return;
+    }
+
+    const isAudio = activeClipSource === 'audio';
+    if (isAudio && !usingCloud()) {
+      setClipStatus('Sign in to save audio loops to your account.');
+      return;
+    }
+    if (isAudio && bounds.end - bounds.start > maxSavedAudioSeconds) {
+      setClipStatus(`Audio loops saved to your account can be up to ${maxSavedAudioSeconds} seconds long.`);
       return;
     }
 
@@ -608,27 +755,54 @@ if (
     const savedLoop = {
       id: existingLoop?.id || (window.crypto?.randomUUID?.() ?? `${now}-${Math.random().toString(36).slice(2)}`),
       name,
-      videoId: currentVideoId,
-      startSeconds: bounds.start,
-      endSeconds: bounds.end,
+      sourceType: isAudio ? 'audio' : 'youtube',
       createdAt: existingLoop?.createdAt || now,
       updatedAt: now,
       lastPracticedAt: existingLoop?.lastPracticedAt || now
     };
 
+    saveYouTubeLoopButton.disabled = true;
+    try {
+      let clipAudio = null;
+      if (isAudio) {
+        setClipStatus('Preparing audio clip...');
+        clipAudio = await encodeWavClip(localAudioBlob, bounds.start, bounds.end);
+        savedLoop.startSeconds = 0;
+        savedLoop.endSeconds = clipAudio.duration;
+        savedLoop.sourceName = existingLoop?.sourceName || localAudioName.slice(0, 120);
+      } else {
+        savedLoop.videoId = currentVideoId;
+        savedLoop.startSeconds = bounds.start;
+        savedLoop.endSeconds = bounds.end;
+      }
+
+      if (usingCloud()) {
+        const stored = await cloudApi().save(savedLoop, clipAudio?.blob || null);
+        Object.assign(savedLoop, stored);
+      } else {
+        savedYouTubeLoops = [savedLoop, ...savedYouTubeLoops.filter((loop) => loop.id !== savedLoop.id)];
+        if (!persistSavedYouTubeLoops()) return;
+      }
+    } catch (error) {
+      console.error('Unable to save loop.', error);
+      setClipStatus(isAudio ? 'The audio loop could not be saved. Try a shorter clip or check your connection.' : 'The loop could not be saved. Try again.');
+      return;
+    } finally {
+      updateSaveYouTubeLoopButton();
+    }
+
     savedYouTubeLoops = [savedLoop, ...savedYouTubeLoops.filter((loop) => loop.id !== savedLoop.id)];
-    if (!persistSavedYouTubeLoops()) return;
     selectedSavedLoopId = savedLoop.id;
     savedClipName.value = name;
-    updateSaveYouTubeLoopButton();
     renderSavedYouTubeLoops();
-    setClipStatus(`Saved "${name}" in this browser.`);
+    setClipStatus(usingCloud() ? `Saved "${name}" to your account.` : `Saved "${name}" in this browser.`);
   });
 
   [clipStartTime, clipEndTime].forEach((input) => input.addEventListener('input', updateSaveYouTubeLoopButton));
   window.addEventListener('hcmai-auth-state-changed', (event) => {
     switchSavedLoopOwner(event.detail?.uid || null);
   });
+  window.addEventListener('hcmai-cloud-loops-ready', refreshCloudLoops);
   renderSavedYouTubeLoops();
 
   markClipStart.addEventListener('click', () => {
