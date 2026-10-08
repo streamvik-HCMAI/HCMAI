@@ -1,13 +1,12 @@
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, orderBy, query, serverTimestamp, setDoc, updateDoc, where } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
-import { deleteObject, getBlob, getDownloadURL, getStorage, ref, setMaxDownloadRetryTime, setMaxOperationRetryTime, setMaxUploadRetryTime, uploadBytes } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js';
+import { deleteObject, getBlob, getDownloadURL, getStorage, ref, uploadBytes } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import { auth } from './auth.js';
 
 const db = getFirestore();
 const storage = getStorage();
-setMaxDownloadRetryTime(storage, 20000);
-setMaxUploadRetryTime(storage, 60000);
-setMaxOperationRetryTime(storage, 20000);
+storage.maxOperationRetryTime = 20000;
+storage.maxUploadRetryTime = 60000;
 
 async function fetchStoredAudio(storageInstance, path) {
   try {

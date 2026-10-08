@@ -16,9 +16,6 @@ import {
   getDownloadURL,
   getStorage,
   ref,
-  setMaxDownloadRetryTime,
-  setMaxOperationRetryTime,
-  setMaxUploadRetryTime,
   uploadBytes
 } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js';
 
@@ -26,9 +23,8 @@ const app = getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-setMaxDownloadRetryTime(storage, 20000);
-setMaxUploadRetryTime(storage, 60000);
-setMaxOperationRetryTime(storage, 20000);
+storage.maxOperationRetryTime = 20000;
+storage.maxUploadRetryTime = 60000;
 
 async function fetchStoredAudio(storageInstance, path) {
   try {
