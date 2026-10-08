@@ -2723,3 +2723,49 @@ input[type="range"] {
   color: var(--muted);
   font-size: 0.9rem;
 }
+
+/* Login sheet: fit small iPhone screens and avoid iOS focus-zoom */
+.auth-modal {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-text-size-adjust: 100%;
+}
+
+.auth-sheet {
+  max-height: calc(100dvh - 98px - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.auth-form input,
+.auth-form select,
+.auth-form textarea {
+  font-size: 16px;
+}
+
+@media (max-width: 699px) {
+  .auth-modal {
+    padding: 12px 10px calc(76px + env(safe-area-inset-bottom));
+  }
+
+  .auth-sheet {
+    padding: 14px 14px 12px;
+  }
+
+  .auth-header h3 {
+    font-size: 1.25rem;
+  }
+
+  .auth-form {
+    gap: 10px;
+  }
+
+  .auth-form input {
+    padding: 11px 12px;
+  }
+
+  .google-sign-in,
+  .auth-submit {
+    min-height: 44px;
+  }
+}
