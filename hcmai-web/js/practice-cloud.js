@@ -16,6 +16,9 @@ import {
   getDownloadURL,
   getStorage,
   ref,
+  setMaxDownloadRetryTime,
+  setMaxOperationRetryTime,
+  setMaxUploadRetryTime,
   uploadBytes
 } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js';
 
@@ -23,6 +26,21 @@ const app = getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+setMaxDownloadRetryTime(storage, 20000);
+setMaxUploadRetryTime(storage, 60000);
+setMaxOperationRetryTime(storage, 20000);
+
+async function fetchStoredAudio(storageInstance, path) {
+  try {
+    return await getBlob(ref(storageInstance, path));
+  } catch (sdkError) {
+    console.warn('Storage SDK download failed; retrying with a direct request.', sdkError);
+    const url = await getDownloadURL(ref(storageInstance, path));
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Audio download failed (${response.status}).`);
+    return response.blob();
+  }
+}
 
 const requireUid = () => {
   const uid = auth.currentUser?.uid;
@@ -71,7 +89,7 @@ window.hcmaiCloudLoops = {
   },
 
   getAudioBlob(loop) {
-    return getBlob(ref(storage, loop.audioPath));
+    return fetchStoredAudio(storage, loop.audioPath);
   },
 
   getAudioUrl(loop) {

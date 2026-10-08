@@ -1,10 +1,25 @@
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, orderBy, query, serverTimestamp, setDoc, updateDoc, where } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
-import { deleteObject, getBlob, getStorage, ref, uploadBytes } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js';
+import { deleteObject, getBlob, getDownloadURL, getStorage, ref, setMaxDownloadRetryTime, setMaxOperationRetryTime, setMaxUploadRetryTime, uploadBytes } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import { auth } from './auth.js';
 
 const db = getFirestore();
 const storage = getStorage();
+setMaxDownloadRetryTime(storage, 20000);
+setMaxUploadRetryTime(storage, 60000);
+setMaxOperationRetryTime(storage, 20000);
+
+async function fetchStoredAudio(storageInstance, path) {
+  try {
+    return await getBlob(ref(storageInstance, path));
+  } catch (sdkError) {
+    console.warn('Storage SDK download failed; retrying with a direct request.', sdkError);
+    const url = await getDownloadURL(ref(storageInstance, path));
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Audio download failed (${response.status}).`);
+    return response.blob();
+  }
+}
 const recordId = new URLSearchParams(window.location.search).get('id') || '';
 const pageStatus = document.getElementById('raagDetailStatus');
 const content = document.getElementById('raagDetailContent');
@@ -593,7 +608,7 @@ practiceLoopForm.addEventListener('submit', async (event) => {
       if (isAudioLoop) {
         const nextPath = raagLoopAudioPath(loopId, accessLevel, isPublished);
         if (nextPath !== editingLoop.audioPath) {
-          const audioBlob = await getBlob(ref(storage, editingLoop.audioPath));
+          const audioBlob = await fetchStoredAudio(storage, editingLoop.audioPath);
           await uploadBytes(ref(storage, nextPath), audioBlob, { contentType: 'audio/wav' });
           previousAudioPath = editingLoop.audioPath;
           loopData.audioPath = nextPath;
@@ -710,7 +725,7 @@ savedLoopForm.addEventListener('submit', async (event) => {
   try {
     if (loopData.sourceType === 'audio') {
       practiceLoopsStatus.textContent = 'Copying audio...';
-      const audioBlob = await getBlob(ref(storage, source.audioPath));
+      const audioBlob = await fetchStoredAudio(storage, source.audioPath);
       uploadedPath = raagLoopAudioPath(newLoopRef.id, accessLevel, isPublished);
       await uploadBytes(ref(storage, uploadedPath), audioBlob, { contentType: 'audio/wav' });
       loopData.audioPath = uploadedPath;
@@ -724,7 +739,8 @@ savedLoopForm.addEventListener('submit', async (event) => {
     await loadPracticeLoops(user);
   } catch (error) {
     if (uploadedPath) await deleteStoredAudio(uploadedPath).catch(() => {});
-    practiceLoopsStatus.textContent = error.message || 'Practice phrase could not be added.';
+    console.error('Unable to add practice phrase.', error);
+    practiceLoopsStatus.textContent = `Practice phrase could not be added: ${error.code || error.message || 'unknown error'}`;
   } finally {
     submitButton.disabled = false;
   }
