@@ -13,6 +13,7 @@ import {
 import {
   deleteObject,
   getBlob,
+  getDownloadURL,
   getStorage,
   ref,
   uploadBytes
@@ -71,6 +72,10 @@ window.hcmaiCloudLoops = {
 
   getAudioBlob(loop) {
     return getBlob(ref(storage, loop.audioPath));
+  },
+
+  getAudioUrl(loop) {
+    return getDownloadURL(ref(storage, loop.audioPath));
   },
 
   async getRaagLoop(raagId, loopId) {

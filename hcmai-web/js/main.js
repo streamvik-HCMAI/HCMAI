@@ -118,6 +118,7 @@ if (
   let savedLoopsOwnerInitialized = false;
   let currentUid = null;
   let localAudioBlob = null;
+  let localAudioLoop = null;
   let localAudioName = '';
   let pendingAudioBounds = null;
   const maxSavedAudioSeconds = 60;
@@ -296,6 +297,7 @@ if (
       youtubePlayer?.stopVideo?.();
       releaseLocalClip();
       localAudioBlob = null;
+    localAudioLoop = null;
       clipAudioFileName.textContent = '';
       activeClipSource = '';
       currentVideoId = '';
@@ -567,13 +569,15 @@ if (
     setClipStatus('This file could not be played. Try MP3, WAV, M4A, OGG, or an MP4/MOV video.');
   });
 
-  const loadLocalAudio = (blob, label, { savedLoopId = '', bounds = null } = {}) => {
+  const loadLocalAudio = (source, label, { savedLoopId = '', bounds = null, storedLoop = null } = {}) => {
     stopClipPlayback();
     activeClipSource = '';
     selectedSavedLoopId = savedLoopId;
     releaseLocalClip();
     activeClipSource = 'audio';
-    localAudioBlob = blob;
+    const isUrl = typeof source === 'string';
+    localAudioBlob = isUrl ? null : source;
+    localAudioLoop = isUrl ? storedLoop : null;
     localAudioName = label;
     pendingAudioBounds = bounds;
     youtubeSavedControls.hidden = false;
@@ -583,8 +587,13 @@ if (
     clipFallbackLink.hidden = true;
     clipAudioFileName.textContent = label;
     setClipStatus('Loading audio...');
-    localClipObjectUrl = URL.createObjectURL(blob);
-    clipLocalAudio.src = localClipObjectUrl;
+    if (isUrl) {
+      localClipObjectUrl = null;
+      clipLocalAudio.src = source;
+    } else {
+      localClipObjectUrl = URL.createObjectURL(source);
+      clipLocalAudio.src = localClipObjectUrl;
+    }
     updateSaveYouTubeLoopButton();
   };
 
@@ -662,6 +671,7 @@ if (
     activeClipSource = '';
     releaseLocalClip();
     localAudioBlob = null;
+    localAudioLoop = null;
     activeClipSource = 'youtube';
     youtubeSavedControls.hidden = false;
     clipYoutubeFrame.hidden = false;
@@ -758,9 +768,10 @@ if (
       button.disabled = true;
       setClipStatus('Loading saved audio...');
       try {
-        const audioBlob = await cloudApi().getAudioBlob(savedLoop);
+        const audioUrl = await cloudApi().getAudioUrl(savedLoop);
         clipVideoUrl.value = '';
-        loadLocalAudio(audioBlob, savedLoop.name, {
+        loadLocalAudio(audioUrl, savedLoop.name, {
+          storedLoop: savedLoop,
           savedLoopId: savedLoop.id,
           bounds: { start: 0, end: savedLoop.endSeconds - savedLoop.startSeconds }
         });
@@ -825,7 +836,8 @@ if (
       let clipAudio = null;
       if (isAudio) {
         setClipStatus('Preparing audio clip...');
-        clipAudio = await encodeWavClip(localAudioBlob, bounds.start, bounds.end);
+        const sourceBlob = localAudioBlob || await cloudApi().getAudioBlob(localAudioLoop);
+        clipAudio = await encodeWavClip(sourceBlob, bounds.start, bounds.end);
         savedLoop.startSeconds = 0;
         savedLoop.endSeconds = clipAudio.duration;
         savedLoop.sourceName = existingLoop?.sourceName || localAudioName.slice(0, 120);
@@ -918,9 +930,10 @@ if (
       savedClipName.value = loop.title || '';
       fillLoopDetails(loop);
       if (loop.sourceType === 'audio') {
-        const audioBlob = await window.hcmaiCloudLoops.getAudioBlob(loop);
+        const audioUrl = await window.hcmaiCloudLoops.getAudioUrl(loop);
         clipVideoUrl.value = '';
-        loadLocalAudio(audioBlob, loop.title || 'Practice phrase', {
+        loadLocalAudio(audioUrl, loop.title || 'Practice phrase', {
+          storedLoop: loop,
           bounds: { start: 0, end: loop.endSeconds - loop.startSeconds }
         });
       } else {

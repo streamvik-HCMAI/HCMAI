@@ -1396,6 +1396,12 @@ input[type="range"] {
   gap: 8px;
 }
 
+.clip-audio-upload {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--stroke);
+}
+
 .clip-url-form > label,
 .clip-audio-upload > label,
 .clip-boundary > label {
