@@ -548,13 +548,22 @@ if (
   });
 
   clipLocalAudio.addEventListener('play', () => {
-    if (activeClipSource === 'audio') {
-      setClipStatus(loopingClip ? 'Playing the selected clip on loop.' : 'Audio is playing.');
+    if (activeClipSource !== 'audio') return;
+    const bounds = readClipBounds();
+    if (!loopingClip && bounds) {
+      loopingClip = true;
+      loopSeekAvailableAt = performance.now() + 350;
+      clipLoopToggle.textContent = 'Pause clip loop';
+      if (clipLocalAudio.currentTime < bounds.start || clipLocalAudio.currentTime >= bounds.end) {
+        clipLocalAudio.currentTime = bounds.start;
+      }
     }
+    startClipClock();
+    setClipStatus(loopingClip ? 'Playing the selected clip on loop.' : 'Audio is playing.');
   });
 
   clipLocalAudio.addEventListener('pause', () => {
-    if (activeClipSource === 'audio' && loopingClip) {
+    if (activeClipSource === 'audio' && loopingClip && !clipLocalAudio.ended) {
       loopingClip = false;
       clipLoopToggle.textContent = 'Play clip loop';
       setClipStatus('Clip loop paused.');
