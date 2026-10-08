@@ -904,7 +904,38 @@ if (
     }
   });
 
+  const loadRaagLoop = async (raagId, loopId) => {
+    setClipStatus('Loading practice phrase...');
+    try {
+      if (!window.hcmaiCloudLoops) {
+        await new Promise((resolve) => window.addEventListener('hcmai-cloud-loops-ready', resolve, { once: true }));
+      }
+      const loop = await window.hcmaiCloudLoops.getRaagLoop(raagId, loopId);
+      if (!loop) {
+        setClipStatus('This practice phrase is not available.');
+        return;
+      }
+      savedClipName.value = loop.title || '';
+      fillLoopDetails(loop);
+      if (loop.sourceType === 'audio') {
+        const audioBlob = await window.hcmaiCloudLoops.getAudioBlob(loop);
+        clipVideoUrl.value = '';
+        loadLocalAudio(audioBlob, loop.title || 'Practice phrase', {
+          bounds: { start: 0, end: loop.endSeconds - loop.startSeconds }
+        });
+      } else {
+        clipVideoUrl.value = `https://www.youtube.com/watch?v=${loop.videoId}`;
+        await loadYouTubeClip(loop.videoId, { startSeconds: loop.startSeconds, endSeconds: loop.endSeconds });
+      }
+    } catch (error) {
+      console.error('Unable to load Raag practice phrase.', error);
+      setClipStatus('This practice phrase could not be loaded. You may need to sign in.');
+    }
+  };
+
   const practiceParams = new URLSearchParams(window.location.search);
+  const requestedRaagLoop = (practiceParams.get('raagLoop') || '').match(/^([\w-]+)\/([\w-]+)$/);
+  if (requestedRaagLoop) loadRaagLoop(requestedRaagLoop[1], requestedRaagLoop[2]);
   const requestedVideoId = practiceParams.get('video') || '';
   const requestedStart = Number(practiceParams.get('start'));
   const requestedEnd = Number(practiceParams.get('end'));

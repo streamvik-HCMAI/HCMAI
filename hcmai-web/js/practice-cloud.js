@@ -3,6 +3,7 @@ import { getAuth } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth
 import {
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   getFirestore,
   collection,
@@ -70,6 +71,12 @@ window.hcmaiCloudLoops = {
 
   getAudioBlob(loop) {
     return getBlob(ref(storage, loop.audioPath));
+  },
+
+  async getRaagLoop(raagId, loopId) {
+    await auth.authStateReady();
+    const snapshot = await getDoc(doc(db, 'raags', raagId, 'practiceLoops', loopId));
+    return snapshot.exists() ? { ...snapshot.data(), id: snapshot.id } : null;
   }
 };
 

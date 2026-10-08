@@ -1,5 +1,5 @@
-import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, orderBy, query, serverTimestamp, updateDoc, where } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
-import { getBlob, getStorage, ref, uploadBytes } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js';
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, orderBy, query, serverTimestamp, setDoc, updateDoc, where } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
+import { deleteObject, getBlob, getStorage, ref, uploadBytes } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import { auth } from './auth.js';
 
@@ -23,6 +23,9 @@ const cancelTopicButton = document.getElementById('cancelRaagTopic');
 const practiceLoopsStatus = document.getElementById('raagPracticeLoopsStatus');
 const practiceLoopsList = document.getElementById('raagPracticeLoopsList');
 const addPracticeLoopButton = document.getElementById('addRaagPracticeLoop');
+const addSavedLoopButton = document.getElementById('addRaagSavedLoop');
+const savedLoopForm = document.getElementById('raagSavedLoopForm');
+const cancelSavedLoopButton = document.getElementById('cancelRaagSavedLoop');
 const practiceLoopForm = document.getElementById('raagPracticeLoopForm');
 const cancelPracticeLoopButton = document.getElementById('cancelRaagPracticeLoop');
 const editButton = document.getElementById('editRaagDetails');
@@ -34,6 +37,22 @@ let record = null;
 let isAdmin = false;
 let isEditing = false;
 let currentUser = null;
+let editingLoop = null;
+const loopMetadataKeys = ['songName', 'raagName', 'notes', 'artist', 'taal', 'laya', 'section'];
+
+function raagLoopAudioPath(loopId, accessLevel, isPublished) {
+  const bucket = !isPublished ? 'private' : (accessLevel === 'public' ? 'public' : 'signedin');
+  return `raagLoops/${bucket}/${recordId}/${loopId}.wav`;
+}
+
+async function deleteStoredAudio(path) {
+  if (!path) return;
+  try {
+    await deleteObject(ref(storage, path));
+  } catch (error) {
+    if (error?.code !== 'storage/object-not-found') throw error;
+  }
+}
 
 const fieldGroups = [
   {
@@ -361,6 +380,13 @@ function parseYouTubeVideoId(value) {
 
 function openPracticeLoopForm(loop = null) {
   practiceLoopForm.reset();
+  savedLoopForm.hidden = true;
+  editingLoop = loop;
+  const isAudioLoop = loop?.sourceType === 'audio';
+  practiceLoopForm.querySelectorAll('[data-youtube-field]').forEach((field) => { field.hidden = isAudioLoop; });
+  practiceLoopForm.elements.videoUrl.required = !isAudioLoop;
+  practiceLoopForm.elements.startTime.required = !isAudioLoop;
+  practiceLoopForm.elements.endTime.required = !isAudioLoop;
   practiceLoopForm.elements.loopId.value = loop?.id || '';
   practiceLoopForm.elements.title.value = loop?.title || '';
   practiceLoopForm.elements.videoUrl.value = loop?.videoId
@@ -392,8 +418,28 @@ function renderPracticeLoops(loops) {
     const title = document.createElement('strong');
     title.textContent = loop.title;
     const description = document.createElement('span');
-    description.textContent = `YouTube · ${formatLoopTime(loop.startSeconds)}–${formatLoopTime(loop.endSeconds)}`;
+    description.textContent = loop.sourceType === 'audio'
+      ? `Audio · ${formatLoopTime(loop.endSeconds - loop.startSeconds)}`
+      : `YouTube · ${formatLoopTime(loop.startSeconds)}–${formatLoopTime(loop.endSeconds)}`;
     copy.append(title, description);
+    const metaText = [
+      loop.songName,
+      loop.raagName && `Raag ${loop.raagName}`,
+      loop.artist,
+      loop.taal && `${loop.taal}${loop.laya ? ` (${loop.laya})` : ''}`,
+      !loop.taal && loop.laya,
+      loop.section
+    ].filter(Boolean).join(' · ');
+    if (metaText) {
+      const meta = document.createElement('span');
+      meta.textContent = metaText;
+      copy.append(meta);
+    }
+    if (Array.isArray(loop.tags) && loop.tags.length) {
+      const tags = document.createElement('span');
+      tags.textContent = loop.tags.map((tag) => `#${tag}`).join(' ');
+      copy.append(tags);
+    }
 
     const actions = document.createElement('div');
     actions.className = 'practice-loop-actions';
@@ -433,6 +479,10 @@ function renderPracticeLoops(loops) {
 
 function buildPracticeLoopUrl(loop) {
   const url = new URL('practice.html', window.location.href);
+  if (loop.sourceType === 'audio') {
+    url.searchParams.set('raagLoop', `${recordId}/${loop.id}`);
+    return `${url.pathname}${url.search}`;
+  }
   url.searchParams.set('video', loop.videoId);
   url.searchParams.set('start', String(loop.startSeconds));
   url.searchParams.set('end', String(loop.endSeconds));
@@ -475,6 +525,7 @@ async function deletePracticeLoop(loop) {
   if (!window.confirm(`Delete the practice phrase "${loop.title}"?`)) return;
   try {
     await deleteDoc(doc(db, 'raags', recordId, 'practiceLoops', loop.id));
+    await deleteStoredAudio(loop.audioPath).catch((error) => console.error('Unable to delete phrase audio.', error));
     practiceLoopsStatus.textContent = 'Practice phrase deleted.';
     await loadPracticeLoops(user);
   } catch (error) {
@@ -486,32 +537,31 @@ addPracticeLoopButton.addEventListener('click', () => openPracticeLoopForm());
 cancelPracticeLoopButton.addEventListener('click', () => {
   practiceLoopForm.reset();
   practiceLoopForm.hidden = true;
+  editingLoop = null;
 });
-practiceLoopForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
+
+async function requireAdminUser(message) {
   const user = auth.currentUser;
   if (!isAdmin || !user || (await user.getIdTokenResult(true)).claims.admin !== true) {
-    practiceLoopsStatus.textContent = 'Administrator permission is required to manage practice phrases.';
-    return;
+    practiceLoopsStatus.textContent = message;
+    return null;
   }
+  return user;
+}
+
+practiceLoopForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const user = await requireAdminUser('Administrator permission is required to manage practice phrases.');
+  if (!user) return;
 
   const formData = new FormData(practiceLoopForm);
   const title = String(formData.get('title') || '').trim();
-  const videoId = parseYouTubeVideoId(String(formData.get('videoUrl') || ''));
-  const startSeconds = parseLoopTime(String(formData.get('startTime') || ''));
-  const endSeconds = parseLoopTime(String(formData.get('endTime') || ''));
   const accessLevel = String(formData.get('accessLevel') || '');
   const loopId = String(formData.get('loopId') || '');
+  const isPublished = formData.get('isPublished') === 'on';
+  const isAudioLoop = Boolean(loopId) && editingLoop?.sourceType === 'audio';
   if (!title || title.length > 80) {
     practiceLoopsStatus.textContent = 'Enter a phrase name up to 80 characters.';
-    return;
-  }
-  if (!videoId) {
-    practiceLoopsStatus.textContent = 'Enter a valid YouTube video link.';
-    return;
-  }
-  if (startSeconds === null || endSeconds === null || endSeconds <= startSeconds) {
-    practiceLoopsStatus.textContent = 'Enter valid timestamps, with the end after the start.';
     return;
   }
   if (!['public', 'signed-in'].includes(accessLevel)) {
@@ -519,20 +569,38 @@ practiceLoopForm.addEventListener('submit', async (event) => {
     return;
   }
 
+  const loopData = { title, accessLevel, isPublished, updatedAt: serverTimestamp() };
+  if (!isAudioLoop) {
+    const videoId = parseYouTubeVideoId(String(formData.get('videoUrl') || ''));
+    const startSeconds = parseLoopTime(String(formData.get('startTime') || ''));
+    const endSeconds = parseLoopTime(String(formData.get('endTime') || ''));
+    if (!videoId) {
+      practiceLoopsStatus.textContent = 'Enter a valid YouTube video link.';
+      return;
+    }
+    if (startSeconds === null || endSeconds === null || endSeconds <= startSeconds) {
+      practiceLoopsStatus.textContent = 'Enter valid timestamps, with the end after the start.';
+      return;
+    }
+    Object.assign(loopData, { sourceType: 'youtube', videoId, startSeconds, endSeconds });
+  }
+
   const submitButton = practiceLoopForm.querySelector('button[type="submit"]');
   submitButton.disabled = true;
-  const loopData = {
-    title,
-    videoId,
-    startSeconds,
-    endSeconds,
-    accessLevel,
-    isPublished: formData.get('isPublished') === 'on',
-    updatedAt: serverTimestamp()
-  };
+  let previousAudioPath = '';
   try {
     if (loopId) {
+      if (isAudioLoop) {
+        const nextPath = raagLoopAudioPath(loopId, accessLevel, isPublished);
+        if (nextPath !== editingLoop.audioPath) {
+          const audioBlob = await getBlob(ref(storage, editingLoop.audioPath));
+          await uploadBytes(ref(storage, nextPath), audioBlob, { contentType: 'audio/wav' });
+          previousAudioPath = editingLoop.audioPath;
+          loopData.audioPath = nextPath;
+        }
+      }
       await updateDoc(doc(db, 'raags', recordId, 'practiceLoops', loopId), loopData);
+      await deleteStoredAudio(previousAudioPath).catch((error) => console.error('Unable to remove old phrase audio.', error));
     } else {
       await addDoc(collection(db, 'raags', recordId, 'practiceLoops'), {
         ...loopData,
@@ -542,10 +610,121 @@ practiceLoopForm.addEventListener('submit', async (event) => {
     }
     practiceLoopForm.reset();
     practiceLoopForm.hidden = true;
+    editingLoop = null;
     practiceLoopsStatus.textContent = loopId ? 'Practice phrase updated.' : 'Practice phrase added.';
     await loadPracticeLoops(user);
   } catch (error) {
     practiceLoopsStatus.textContent = error.message || 'Practice phrase could not be saved.';
+  } finally {
+    submitButton.disabled = false;
+  }
+});
+
+let adminSavedLoops = [];
+
+addSavedLoopButton.addEventListener('click', async () => {
+  const user = await requireAdminUser('Administrator permission is required to manage practice phrases.');
+  if (!user) return;
+  practiceLoopForm.hidden = true;
+  editingLoop = null;
+  practiceLoopsStatus.textContent = 'Loading your saved loops...';
+  try {
+    const snapshot = await getDocs(collection(db, 'users', user.uid, 'practiceLoops'));
+    const raagName = String(record?.name || '').trim().toLowerCase();
+    adminSavedLoops = snapshot.docs.map((loopDoc) => ({ ...loopDoc.data(), id: loopDoc.id }))
+      .sort((left, right) => {
+        const leftMatch = raagName && String(left.raagName || '').trim().toLowerCase() === raagName ? 0 : 1;
+        const rightMatch = raagName && String(right.raagName || '').trim().toLowerCase() === raagName ? 0 : 1;
+        return leftMatch - rightMatch || (right.updatedAt || 0) - (left.updatedAt || 0);
+      });
+    if (!adminSavedLoops.length) {
+      practiceLoopsStatus.textContent = 'You have no saved loops yet. Save loops on the Practice tab first.';
+      return;
+    }
+    const select = savedLoopForm.elements.savedLoopId;
+    select.replaceChildren(...adminSavedLoops.map((loop) => {
+      const option = document.createElement('option');
+      option.value = loop.id;
+      option.textContent = [loop.name, loop.raagName && `Raag ${loop.raagName}`, loop.sourceType === 'audio' ? 'audio' : 'YouTube']
+        .filter(Boolean).join(' · ');
+      return option;
+    }));
+    savedLoopForm.reset();
+    savedLoopForm.hidden = false;
+    practiceLoopsStatus.textContent = 'Choose a saved loop to add to this Raag.';
+  } catch (error) {
+    console.error('Unable to load saved loops.', error);
+    practiceLoopsStatus.textContent = 'Your saved loops could not be loaded.';
+  }
+});
+
+cancelSavedLoopButton.addEventListener('click', () => {
+  savedLoopForm.reset();
+  savedLoopForm.hidden = true;
+});
+
+savedLoopForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const user = await requireAdminUser('Administrator permission is required to manage practice phrases.');
+  if (!user) return;
+
+  const formData = new FormData(savedLoopForm);
+  const source = adminSavedLoops.find((loop) => loop.id === String(formData.get('savedLoopId') || ''));
+  const title = String(formData.get('title') || '').trim() || String(source?.name || '').trim();
+  const accessLevel = String(formData.get('accessLevel') || '');
+  const isPublished = formData.get('isPublished') === 'on';
+  if (!source) {
+    practiceLoopsStatus.textContent = 'Choose a saved loop.';
+    return;
+  }
+  if (!title || title.length > 80) {
+    practiceLoopsStatus.textContent = 'Enter a phrase name up to 80 characters.';
+    return;
+  }
+  if (!['public', 'signed-in'].includes(accessLevel)) {
+    practiceLoopsStatus.textContent = 'Choose a valid access level.';
+    return;
+  }
+
+  const submitButton = savedLoopForm.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  const newLoopRef = doc(collection(db, 'raags', recordId, 'practiceLoops'));
+  const loopData = {
+    title,
+    sourceType: source.sourceType === 'audio' ? 'audio' : 'youtube',
+    startSeconds: source.startSeconds,
+    endSeconds: source.endSeconds,
+    accessLevel,
+    isPublished,
+    sourceLoopId: source.id,
+    createdBy: user.uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  };
+  loopMetadataKeys.forEach((key) => {
+    if (typeof source[key] === 'string' && source[key]) loopData[key] = source[key];
+  });
+  if (Array.isArray(source.tags) && source.tags.length) loopData.tags = source.tags.slice(0, 10);
+
+  let uploadedPath = '';
+  try {
+    if (loopData.sourceType === 'audio') {
+      practiceLoopsStatus.textContent = 'Copying audio...';
+      const audioBlob = await getBlob(ref(storage, source.audioPath));
+      uploadedPath = raagLoopAudioPath(newLoopRef.id, accessLevel, isPublished);
+      await uploadBytes(ref(storage, uploadedPath), audioBlob, { contentType: 'audio/wav' });
+      loopData.audioPath = uploadedPath;
+    } else {
+      loopData.videoId = source.videoId;
+    }
+    await setDoc(newLoopRef, loopData);
+    savedLoopForm.reset();
+    savedLoopForm.hidden = true;
+    practiceLoopsStatus.textContent = 'Practice phrase added.';
+    await loadPracticeLoops(user);
+  } catch (error) {
+    if (uploadedPath) await deleteStoredAudio(uploadedPath).catch(() => {});
+    practiceLoopsStatus.textContent = error.message || 'Practice phrase could not be added.';
   } finally {
     submitButton.disabled = false;
   }

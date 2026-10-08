@@ -58,15 +58,26 @@
           <section class="raag-recordings raag-practice-loops" aria-labelledby="raagPracticeLoopsTitle">
             <div class="section-head">
               <h2 id="raagPracticeLoopsTitle">Practice phrases</h2>
-              <button id="addRaagPracticeLoop" class="secondary-btn small admin-only" data-admin-only type="button">Add YouTube loop</button>
+              <div class="inline-actions">
+                <button id="addRaagSavedLoop" class="secondary-btn small admin-only" data-admin-only type="button">Add from my saved loops</button>
+                <button id="addRaagPracticeLoop" class="secondary-btn small admin-only" data-admin-only type="button">Add YouTube loop</button>
+              </div>
             </div>
             <p id="raagPracticeLoopsStatus" class="raag-status" role="status" aria-live="polite">Loading practice phrases...</p>
             <div id="raagPracticeLoopsList" class="practice-loop-list"></div>
+            <form id="raagSavedLoopForm" class="raag-admin-form raag-practice-loop-form" hidden>
+              <label class="raag-edit-field"><span>My saved loop</span><select name="savedLoopId" required></select></label>
+              <label class="raag-edit-field"><span>Phrase name (leave blank to keep the saved name)</span><input name="title" type="text" maxlength="80" /></label>
+              <label class="raag-edit-field"><span>Who can practice this phrase?</span><select name="accessLevel"><option value="public">Anyone</option><option value="signed-in">Signed-in users</option></select></label>
+              <label class="check-row"><input name="isPublished" type="checkbox" /><span>Publish for learners</span></label>
+              <p class="clip-privacy-note">A copy of the loop, including its audio, is added to this Raag. Your saved loop stays unchanged. Unpublished phrases are visible only to administrators.</p>
+              <div class="inline-actions"><button class="primary-btn small" type="submit">Add to this Raag</button><button id="cancelRaagSavedLoop" class="secondary-btn small" type="button">Cancel</button></div>
+            </form>
             <form id="raagPracticeLoopForm" class="raag-admin-form raag-practice-loop-form" hidden>
               <input name="loopId" type="hidden" />
               <label class="raag-edit-field"><span>Phrase name</span><input name="title" type="text" maxlength="80" required /></label>
-              <label class="raag-edit-field"><span>YouTube video link</span><input name="videoUrl" type="url" placeholder="https://www.youtube.com/watch?v=..." required /></label>
-              <div class="practice-loop-time-fields">
+              <label class="raag-edit-field" data-youtube-field><span>YouTube video link</span><input name="videoUrl" type="url" placeholder="https://www.youtube.com/watch?v=..." required /></label>
+              <div class="practice-loop-time-fields" data-youtube-field>
                 <label class="raag-edit-field"><span>Clip starts at (m:ss)</span><input name="startTime" type="text" inputmode="numeric" placeholder="0:00" required /></label>
                 <label class="raag-edit-field"><span>Clip ends at (m:ss)</span><input name="endTime" type="text" inputmode="numeric" placeholder="0:10" required /></label>
               </div>
@@ -113,6 +124,6 @@
     </nav>
     <script src="js/main.js?v=20261006-curatedloops"></script>
     <script type="module" src="js/auth.js"></script>
-    <script type="module" src="js/raag-detail.js?v=20261006-auth-edit-lock"></script>
+    <script type="module" src="js/raag-detail.js?v=20261007-raagaudioloops"></script>
   </body>
 </html>
