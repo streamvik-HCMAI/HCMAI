@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="css/styles.css?v=20261009-inline2" />
+    <link rel="stylesheet" href="css/styles.css?v=20261009-featured" />
   </head>
   <body data-page="raag-detail">
     <header class="topbar">
@@ -64,7 +64,6 @@
               </div>
             </div>
             <p id="raagPracticeLoopsStatus" class="raag-status" role="status" aria-live="polite">Loading practice phrases...</p>
-            <div id="raagPracticeLoopsList" class="practice-loop-list"></div>
             <form id="raagSavedLoopForm" class="raag-admin-form raag-practice-loop-form" hidden>
               <label class="raag-edit-field"><span>My saved loop</span><select name="savedLoopId" required></select></label>
               <label class="raag-edit-field"><span>Phrase name (leave blank to keep the saved name)</span><input name="title" type="text" maxlength="80" /></label>
@@ -86,6 +85,7 @@
               <p class="clip-privacy-note">Unpublished phrases are visible only to administrators.</p>
               <div class="inline-actions"><button class="primary-btn small" type="submit">Save phrase</button><button id="cancelRaagPracticeLoop" class="secondary-btn small" type="button">Cancel</button></div>
             </form>
+            <div id="raagPracticeLoopsList" class="practice-loop-list"></div>
           </section>
           <details class="raag-provenance">
             <summary>Source and verification</summary>

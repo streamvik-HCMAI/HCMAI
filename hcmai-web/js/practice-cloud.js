@@ -7,6 +7,8 @@ import {
   getDocs,
   getFirestore,
   collection,
+  query,
+  where,
   setDoc,
   updateDoc
 } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
@@ -48,6 +50,73 @@ const loopCollection = (uid) => collection(db, 'users', uid, 'practiceLoops');
 const audioPathFor = (uid, loopId) => `userLoops/${uid}/${loopId}.wav`;
 
 window.hcmaiCloudLoops = {
+  async featured() {
+    await auth.authStateReady();
+    const user = auth.currentUser;
+    const isAdmin = Boolean(user && (await user.getIdTokenResult()).claims.admin === true);
+    const entries = collection(db, 'featuredLoops');
+    const snapshots = isAdmin
+      ? [await getDocs(entries)]
+      : await Promise.all((user ? ['public', 'signed-in'] : ['public']).map((level) =>
+        getDocs(query(entries, where('isPublished', '==', true), where('accessLevel', '==', level)))));
+    return { isAdmin, loops: snapshots.flatMap((snapshot) =>
+      snapshot.docs.map((entry) => ({ ...entry.data(), id: entry.id })))
+      .sort((left, right) => Number(left.id) - Number(right.id)) };
+  },
+
+  async setFeatured(slot, source, accessLevel, isPublished) {
+    const uid = requireUid();
+    if (!(await auth.currentUser.getIdTokenResult()).claims.admin) throw new Error('Administrator access is required.');
+    if (!['1', '2', '3', '4', '5'].includes(slot) || !['public', 'signed-in'].includes(accessLevel)) {
+      throw new Error('Choose a valid featured slot and access level.');
+    }
+    const target = doc(db, 'featuredLoops', slot);
+    const previous = await getDoc(target);
+    const data = {
+      ...source, sourceType: source.sourceType === 'audio' ? 'audio' : 'youtube',
+      sourceLoopId: source.id, createdBy: uid, accessLevel, isPublished
+    };
+    delete data.id;
+    let uploadedPath = '';
+    try {
+      if (data.sourceType === 'audio') {
+        const visibility = !isPublished ? 'private' : accessLevel === 'public' ? 'public' : 'signedin';
+        uploadedPath = `featuredLoops/${visibility}/${slot}/${crypto.randomUUID()}.wav`;
+        const blob = await fetchStoredAudio(storage, source.audioPath);
+        await uploadBytes(ref(storage, uploadedPath), blob, { contentType: 'audio/wav' });
+        data.audioPath = uploadedPath;
+      }
+      if (auth.currentUser?.uid !== uid) throw new Error('Your sign-in changed. Try again.');
+      await setDoc(target, data);
+    } catch (error) {
+      if (uploadedPath) {
+        try { await deleteObject(ref(storage, uploadedPath)); }
+        catch (cleanupError) { console.error('Unable to clean up featured audio.', cleanupError); }
+      }
+      throw error;
+    }
+    const previousPath = previous.data()?.audioPath;
+    if (previousPath && previousPath !== data.audioPath) {
+      try { await deleteObject(ref(storage, previousPath)); }
+      catch (error) {
+        if (error.code !== 'storage/object-not-found') throw new Error(`Featured loop saved, but its previous audio could not be removed: ${error.message}`);
+      }
+    }
+  },
+
+  async removeFeatured(slot) {
+    if (!(await auth.currentUser?.getIdTokenResult())?.claims.admin) throw new Error('Administrator access is required.');
+    const target = doc(db, 'featuredLoops', slot);
+    const snapshot = await getDoc(target);
+    await deleteDoc(target);
+    if (snapshot.data()?.audioPath) {
+      try { await deleteObject(ref(storage, snapshot.data().audioPath)); }
+      catch (error) {
+        if (error.code !== 'storage/object-not-found') throw new Error(`Featured loop removed, but its audio could not be removed: ${error.message}`);
+      }
+    }
+  },
+
   async list() {
     const uid = requireUid();
     const snapshot = await getDocs(loopCollection(uid));

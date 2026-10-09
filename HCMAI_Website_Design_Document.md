@@ -202,6 +202,18 @@ A responsive web version should preserve the same mental model:
 - loading a saved loop brings its player into view; filtering and pagination do not change stored loops
 - Raag practice phrases play inside a responsive inline player in portrait and landscape; audio URLs are prepared before the click to preserve mobile playback permission
 - phrase players request immediate playback and expose a Play phrase control if browser autoplay restrictions require another tap
+- five ordered featured-loop slots are managed by admins from personal saved loops; publishing creates independent audio copies with public, signed-in, or draft access
+- learners see accessible published featured loops in a swipeable mobile row or desktop card grid; practicing a featured loop does not modify the original and it can be saved as a new personal loop
+- Raag add/edit phrase forms appear before the existing phrase list, with width-constrained source selectors
+
+Admins configure Featured slots 1-5 on the Practice page by choosing a personal
+saved loop, setting Anyone or Signed-in users, checking Publish for learners,
+and saving the slot. Leaving Publish unchecked saves an admin-only draft.
+Clear featured slot removes that featured copy, not the personal original.
+The slots display in numeric order; choosing a different loop replaces a slot.
+Run `node --test tools/test-featured-loops.cjs` to validate featured-copy API
+behavior. These tests mock Firebase boundaries; rule compilation is validated
+separately with a Firebase deployment dry run.
 
 ### Composition features
 - swara note entry

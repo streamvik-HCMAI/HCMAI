@@ -17,7 +17,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css/styles.css?v=20261009-looplibrary" />
+    <link rel="stylesheet" href="css/styles.css?v=20261009-featured" />
   </head>
   <body data-page="practice">
     <header class="topbar">
@@ -200,6 +200,12 @@
           </div>
         </div>
       </section>
+      <section class="section-surface featured-loops" aria-labelledby="featuredLoopsTitle">
+        <h2 id="featuredLoopsTitle">Featured loops</h2>
+        <p>Choose a phrase to practice. On mobile, swipe to explore the selection.</p>
+        <p id="featuredLoopsStatus" class="raag-status" role="status" aria-live="polite">Loading featured loops...</p>
+        <ul id="featuredLoopsList" class="featured-loop-list" aria-labelledby="featuredLoopsTitle"></ul>
+      </section>
       <section class="section-surface saved-loops" aria-labelledby="savedLoopsTitle">
         <div class="saved-loops-header">
           <h2 id="savedLoopsTitle">Saved loops</h2>
@@ -245,8 +251,8 @@
       <a href="practice.html" class="bottom-item active"><span>Practice</span></a>
     </nav>
 
-    <script src="js/main.js?v=20261009-looplibrary"></script>
+    <script src="js/main.js?v=20261009-featured"></script>
     <script type="module" src="js/auth.js?v=20261006-savedloops-account-scope"></script>
-    <script type="module" src="js/practice-cloud.js?v=20261007-failfast2"></script>
+    <script type="module" src="js/practice-cloud.js?v=20261009-featured"></script>
   </body>
 </html>

@@ -1957,8 +1957,11 @@ input[type="range"] {
 }
 
 .raag-edit-field input,
+.raag-edit-field select,
 .raag-edit-field textarea {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 42px;
   padding: 9px 11px;
   border: 1px solid var(--stroke);
@@ -1967,6 +1970,54 @@ input[type="range"] {
   color: var(--text);
   font: inherit;
   font-weight: 400;
+}
+
+.featured-loops {
+  margin-top: 20px;
+}
+
+.featured-loop-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.featured-loop-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
+
+.featured-loop-card h3,
+.featured-loop-card p {
+  margin: 0;
+}
+
+.featured-loop-card form {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+@media (max-width: 620px) {
+  .featured-loop-list {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 12px;
+  }
+
+  .featured-loop-card {
+    flex: 0 0 85%;
+    scroll-snap-align: start;
+  }
 }
 
 .raag-edit-field textarea {

@@ -15,6 +15,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /featuredLoops/{slot} {
+      allow read: if isAdmin() || (resource.data.isPublished == true
+        && (resource.data.accessLevel == 'public'
+          || (resource.data.accessLevel == 'signed-in' && signedIn())));
+      allow create, update: if isAdmin()
+        && slot in ['1', '2', '3', '4', '5']
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.sourceType in ['youtube', 'audio']
+        && request.resource.data.accessLevel in ['public', 'signed-in']
+        && request.resource.data.isPublished is bool;
+      allow delete: if isAdmin();
+    }
+
     match /raags/{raagId} {
       allow read: if resource.data.isPublished == true || isAdmin();
       allow create, update, delete: if isAdmin();

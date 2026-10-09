@@ -44,6 +44,13 @@ Keep this domain in Firebase Authentication's authorized domains and
 client's authorized redirect URIs. Keep existing Firebase redirect URIs as well.
 Development continues to use `hcmai-dev.firebaseapp.com`.
 
+Featured Practice loops use five documents (`1` through `5`) in `featuredLoops`.
+Only administrators can manage them. Learners can read published entries with
+public access, or signed-in access while authenticated. Draft audio copies are
+stored under `featuredLoops/private`; published copies use `public` or
+`signedin`. Personal `userLoops` audio is never shared directly. Deploy both
+Firestore and Storage rules with the website when enabling this feature.
+
 The commands below deploy hosting and access rules only. They leave Moodle
 Cloud Functions unchanged; deploying those functions requires their Secret
 Manager configuration first.

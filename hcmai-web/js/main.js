@@ -89,6 +89,8 @@ const savedLoopsPagination = document.getElementById('savedLoopsPagination');
 const savedLoopsPrevious = document.getElementById('savedLoopsPrevious');
 const savedLoopsNext = document.getElementById('savedLoopsNext');
 const savedLoopsPageStatus = document.getElementById('savedLoopsPageStatus');
+const featuredLoopsList = document.getElementById('featuredLoopsList');
+const featuredLoopsStatus = document.getElementById('featuredLoopsStatus');
 const youtubeSavedControls = document.getElementById('youtubeSavedControls');
 const savedClipName = document.getElementById('savedClipName');
 const saveYouTubeLoopButton = document.getElementById('saveYouTubeLoop');
@@ -129,6 +131,9 @@ if (
   let localAudioLoop = null;
   let localAudioName = '';
   let pendingAudioBounds = null;
+  let featuredRequest = 0;
+  let featuredLoops = [];
+  let featuredAdmin = false;
   const maxSavedAudioSeconds = 60;
   const cloudApi = () => window.hcmaiCloudLoops || null;
   const usingCloud = () => Boolean(currentUid && cloudApi());
@@ -387,9 +392,150 @@ if (
       if (uid !== currentUid) return;
       savedYouTubeLoops = loops;
       renderSavedYouTubeLoops();
+      if (featuredAdmin) renderFeaturedLoops();
     } catch (error) {
       console.error('Unable to load saved loops from your account.', error);
       setClipStatus('Saved loops could not be loaded from your account.');
+    }
+  }
+
+  function renderFeaturedLoops() {
+    if (!featuredLoopsList) return;
+    featuredLoopsList.replaceChildren();
+    const slots = featuredAdmin ? ['1', '2', '3', '4', '5'] : featuredLoops.map((loop) => loop.id);
+    featuredLoopsStatus.textContent = featuredAdmin
+      ? 'Manage five featured slots. Published copies are separate from your saved loops.'
+      : featuredLoops.length ? `${featuredLoops.length} featured loops available` : 'No featured loops are available yet.';
+    slots.forEach((slot) => {
+      const loop = featuredLoops.find((entry) => entry.id === slot);
+      const card = document.createElement('li');
+      card.className = 'featured-loop-card';
+      const title = document.createElement('h3');
+      title.textContent = loop?.name || `Featured slot ${slot}`;
+      card.append(title);
+      if (loop) {
+        const description = document.createElement('p');
+        description.textContent = [
+          loop.sourceType === 'audio' ? 'Audio' : 'YouTube',
+          loop.raagName,
+          `${formatClipTime(loop.endSeconds - loop.startSeconds)}`,
+          featuredAdmin && (!loop.isPublished ? 'Draft' : loop.accessLevel === 'public' ? 'Published · Anyone' : 'Published · Signed-in users')
+        ].filter(Boolean).join(' · ');
+        const load = document.createElement('button');
+        load.type = 'button';
+        load.className = 'primary-btn small';
+        load.textContent = 'Practice loop';
+        load.setAttribute('aria-label', `Practice ${loop.name}`);
+        load.addEventListener('click', () => loadPracticeSelection(loop, load, false));
+        card.append(description, load);
+      }
+      if (featuredAdmin) {
+        const form = document.createElement('form');
+        const makeSelect = (labelText, name, options) => {
+          const label = document.createElement('label');
+          label.className = 'raag-edit-field';
+          const caption = document.createElement('span');
+          caption.textContent = labelText;
+          const select = document.createElement('select');
+          select.name = name;
+          options.forEach(([value, text]) => select.add(new Option(text, value)));
+          label.append(caption, select);
+          form.append(label);
+          return select;
+        };
+        const source = makeSelect('My saved loop', 'source', [
+          ['', 'Choose a saved loop'],
+          ...savedYouTubeLoops.map((saved) => [saved.id, saved.name])
+        ]);
+        source.value = savedYouTubeLoops.some((saved) => saved.id === loop?.sourceLoopId) ? loop.sourceLoopId : '';
+        const access = makeSelect('Who can practice this loop?', 'access', [
+          ['public', 'Anyone'], ['signed-in', 'Signed-in users']
+        ]);
+        access.value = loop?.accessLevel || 'public';
+        const label = document.createElement('label');
+        label.className = 'check-row';
+        const published = document.createElement('input');
+        published.type = 'checkbox';
+        published.checked = loop?.isPublished === true;
+        label.append(published, document.createTextNode('Publish for learners'));
+        const save = document.createElement('button');
+        save.type = 'submit';
+        save.className = 'secondary-btn small';
+        save.textContent = 'Save featured slot';
+        form.append(label, save);
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const selected = savedYouTubeLoops.find((saved) => saved.id === source.value);
+          if (!selected) {
+            featuredLoopsStatus.textContent = 'Choose a saved loop before saving this slot.';
+            source.focus();
+            return;
+          }
+          const uid = currentUid;
+          const request = featuredRequest;
+          save.disabled = true;
+          featuredLoopsStatus.textContent = 'Saving featured loop...';
+          try {
+            await cloudApi().setFeatured(slot, selected, access.value, published.checked);
+            if (uid === currentUid && request === featuredRequest) await refreshFeaturedLoops();
+          } catch (error) {
+            console.error('Unable to save featured loop.', error);
+            if (uid === currentUid && request === featuredRequest) featuredLoopsStatus.textContent = error.message;
+          } finally {
+            save.disabled = false;
+          }
+        });
+        card.append(form);
+        if (loop) {
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'secondary-btn small';
+          remove.textContent = 'Clear featured slot';
+          remove.addEventListener('click', async () => {
+            const uid = currentUid;
+            const request = featuredRequest;
+            remove.disabled = true;
+            try {
+              await cloudApi().removeFeatured(slot);
+              if (uid === currentUid && request === featuredRequest) await refreshFeaturedLoops();
+            } catch (error) {
+              console.error('Unable to clear featured loop.', error);
+              if (uid === currentUid && request === featuredRequest) featuredLoopsStatus.textContent = error.message;
+            } finally {
+              remove.disabled = false;
+            }
+          });
+          card.append(remove);
+        }
+      }
+      featuredLoopsList.append(card);
+    });
+  }
+
+  async function refreshFeaturedLoops() {
+    if (!featuredLoopsList || !cloudApi()) return;
+    const request = ++featuredRequest;
+    const uid = currentUid;
+    featuredAdmin = false;
+    featuredLoops = [];
+    featuredLoopsList.replaceChildren();
+    featuredLoopsStatus.textContent = 'Loading featured loops...';
+    try {
+      const result = await cloudApi().featured();
+      if (request !== featuredRequest) return;
+      if (result.isAdmin && uid) {
+        const loops = await cloudApi().list();
+        if (request !== featuredRequest || uid !== currentUid) return;
+        savedYouTubeLoops = loops;
+        renderSavedYouTubeLoops();
+      }
+      featuredAdmin = result.isAdmin;
+      featuredLoops = result.loops;
+      renderFeaturedLoops();
+    } catch (error) {
+      if (request !== featuredRequest) return;
+      console.error('Unable to load featured loops.', error);
+      featuredLoopsStatus.textContent = 'Featured loops could not be loaded. Reload the page to retry.';
     }
   }
 
@@ -814,14 +960,25 @@ if (
         updateSaveYouTubeLoopButton();
       }
       renderSavedYouTubeLoops();
+      if (featuredAdmin) renderFeaturedLoops();
       setClipStatus(`Deleted "${savedLoop.name}".`);
       return;
     }
 
-    savedLoop.lastPracticedAt = Date.now();
-    if (usingCloud()) cloudApi().touch(savedLoop.id, savedLoop.lastPracticedAt).catch(() => {});
-    else persistSavedYouTubeLoops();
-    persistLoopList();
+    await loadPracticeSelection(savedLoop, button, true);
+  });
+
+  async function loadPracticeSelection(savedLoop, button, personal) {
+    const uid = currentUid;
+    if (personal) {
+      savedLoop.lastPracticedAt = Date.now();
+      if (usingCloud()) cloudApi().touch(savedLoop.id, savedLoop.lastPracticedAt).catch((error) => {
+        console.error('Unable to update loop practice time.', error);
+        setClipStatus('The last-practiced time could not be saved.');
+      });
+      else persistSavedYouTubeLoops();
+      persistLoopList();
+    }
     savedClipName.value = savedLoop.name;
     fillLoopDetails(savedLoop);
 
@@ -830,12 +987,14 @@ if (
       setClipStatus('Loading saved audio...');
       try {
         const audioUrl = await cloudApi().getAudioUrl(savedLoop);
+        if (uid !== currentUid) return;
         clipVideoUrl.value = '';
         loadLocalAudio(audioUrl, savedLoop.name, {
           storedLoop: savedLoop,
-          savedLoopId: savedLoop.id,
+          savedLoopId: personal ? savedLoop.id : '',
           bounds: { start: 0, end: savedLoop.endSeconds - savedLoop.startSeconds }
         });
+        clipWorkspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } catch (error) {
         console.error('Unable to load saved audio loop.', error);
         setClipStatus('The saved audio could not be loaded. Check your connection and try again.');
@@ -849,9 +1008,10 @@ if (
     await loadYouTubeClip(savedLoop.videoId, {
       startSeconds: savedLoop.startSeconds,
       endSeconds: savedLoop.endSeconds,
-      savedLoopId: savedLoop.id
+      savedLoopId: personal ? savedLoop.id : ''
     });
-  });
+    clipWorkspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   saveYouTubeLoopButton.addEventListener('click', async () => {
     const bounds = readClipBounds();
@@ -927,14 +1087,19 @@ if (
     selectedSavedLoopId = savedLoop.id;
     savedClipName.value = name;
     renderSavedYouTubeLoops();
+    if (featuredAdmin) renderFeaturedLoops();
     setClipStatus(usingCloud() ? `Saved "${name}" to your account.` : `Saved "${name}" in this browser.`);
   });
 
   [clipStartTime, clipEndTime].forEach((input) => input.addEventListener('input', updateSaveYouTubeLoopButton));
   window.addEventListener('hcmai-auth-state-changed', (event) => {
     switchSavedLoopOwner(event.detail?.uid || null);
+    refreshFeaturedLoops();
   });
-  window.addEventListener('hcmai-cloud-loops-ready', refreshCloudLoops);
+  window.addEventListener('hcmai-cloud-loops-ready', () => {
+    refreshCloudLoops();
+    refreshFeaturedLoops();
+  });
   renderSavedYouTubeLoops();
 
   markClipStart.addEventListener('click', () => {
