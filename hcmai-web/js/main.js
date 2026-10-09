@@ -401,6 +401,7 @@ if (
 
   function renderFeaturedLoops() {
     if (!featuredLoopsList) return;
+    window.hcmaiInlinePlayers.close(featuredLoopsList);
     featuredLoopsList.replaceChildren();
     const slots = featuredAdmin ? ['1', '2', '3', '4', '5'] : featuredLoops.map((loop) => loop.id);
     featuredLoopsStatus.textContent = featuredAdmin
@@ -426,8 +427,11 @@ if (
         load.className = 'primary-btn small';
         load.textContent = 'Practice loop';
         load.setAttribute('aria-label', `Practice ${loop.name}`);
-        load.addEventListener('click', () => loadPracticeSelection(loop, load, false));
+        if (featuredAdmin) load.addEventListener('click', () => loadPracticeSelection(loop, load, false));
         card.append(description, load);
+        if (!featuredAdmin) {
+          window.hcmaiInlinePlayers.attach(card, load, loop, (phrase) => cloudApi().getAudioUrl(phrase));
+        }
       }
       if (featuredAdmin) {
         const form = document.createElement('form');
@@ -518,6 +522,7 @@ if (
     const uid = currentUid;
     featuredAdmin = false;
     featuredLoops = [];
+    window.hcmaiInlinePlayers.close(featuredLoopsList);
     featuredLoopsList.replaceChildren();
     featuredLoopsStatus.textContent = 'Loading featured loops...';
     try {
@@ -775,6 +780,7 @@ if (
   });
 
   const loadLocalAudio = (source, label, { savedLoopId = '', bounds = null, storedLoop = null } = {}) => {
+    window.hcmaiInlinePlayers.close();
     stopClipPlayback();
     activeClipSource = '';
     selectedSavedLoopId = savedLoopId;
@@ -870,6 +876,7 @@ if (
   });
 
   const loadYouTubeClip = async (videoId, { startSeconds = 0, endSeconds = 10, savedLoopId = '' } = {}) => {
+    window.hcmaiInlinePlayers.close();
     clipFallbackLink.hidden = true;
     currentVideoId = videoId;
     selectedSavedLoopId = savedLoopId;
@@ -1096,6 +1103,7 @@ if (
     switchSavedLoopOwner(event.detail?.uid || null);
     refreshFeaturedLoops();
   });
+  window.addEventListener('hcmai-inline-player-opening', stopClipPlayback);
   window.addEventListener('hcmai-cloud-loops-ready', () => {
     refreshCloudLoops();
     refreshFeaturedLoops();

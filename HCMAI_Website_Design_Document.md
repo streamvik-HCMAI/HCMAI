@@ -203,7 +203,8 @@ A responsive web version should preserve the same mental model:
 - Raag practice phrases play inside a responsive inline player in portrait and landscape; audio URLs are prepared before the click to preserve mobile playback permission
 - phrase players request immediate playback and expose a Play phrase control if browser autoplay restrictions require another tap
 - five ordered featured-loop slots are managed by admins from personal saved loops; publishing creates independent audio copies with public, signed-in, or draft access
-- learners see accessible published featured loops in a swipeable mobile row or desktop card grid; practicing a featured loop does not modify the original and it can be saved as a new personal loop
+- learners see accessible published featured loops in a swipeable mobile row or desktop card grid; selecting one plays it inline without exposing timestamp, metadata, or save controls
+- featured-loop admin preview continues to open the Practice editor; learner and Raag phrase playback share the same inline player and stop when closed or replaced
 - Raag add/edit phrase forms appear before the existing phrase list, with width-constrained source selectors
 
 Admins configure Featured slots 1-5 on the Practice page by choosing a personal
