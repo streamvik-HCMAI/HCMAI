@@ -196,6 +196,12 @@ A responsive web version should preserve the same mental model:
 - scale-based tanpura/drone playback
 - continuous looping audio for riyaz
 - scale selection across multiple tones
+- loop creation from YouTube links or local audio/video files, with the Load video button below both source options (local files load on selection)
+- player, timestamp controls, and loop-saving controls appear before a separate saved-loop library
+- saved-loop library uses compact cards, searches names and metadata, filters by source, and displays six loops per page
+- loading a saved loop brings its player into view; filtering and pagination do not change stored loops
+- Raag practice phrases play inside a responsive inline player in portrait and landscape; audio URLs are prepared before the click to preserve mobile playback permission
+- phrase players request immediate playback and expose a Play phrase control if browser autoplay restrictions require another tap
 
 ### Composition features
 - swara note entry

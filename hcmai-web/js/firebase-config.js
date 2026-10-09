@@ -9,7 +9,7 @@ const developmentConfig = {
 
 const productionConfig = {
   apiKey: 'AIzaSyAwRkRd7rC8BecEWc2TCo5A5PcqSlUBWVM',
-  authDomain: 'hcmai-v3e0h9.firebaseapp.com',
+  authDomain: 'hcm.streamvik.com',
   projectId: 'hcmai-v3e0h9',
   storageBucket: 'hcmai-v3e0h9.firebasestorage.app',
   messagingSenderId: '885235463396',

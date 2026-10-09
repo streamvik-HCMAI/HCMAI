@@ -415,6 +415,7 @@ function openPracticeLoopForm(loop = null) {
 }
 
 function renderPracticeLoops(loops) {
+  closeInlinePlayers();
   practiceLoopsList.replaceChildren();
   if (!loops.length) {
     practiceLoopsStatus.textContent = isAdmin
@@ -470,7 +471,41 @@ function renderPracticeLoops(loops) {
     practiceButton.className = 'primary-btn small';
     practiceButton.type = 'button';
     practiceButton.textContent = 'Practice phrase';
-    practiceButton.addEventListener('click', () => toggleInlinePlayer(row, practiceButton, loop));
+    practiceButton.setAttribute('aria-expanded', 'false');
+    const audio = loop.sourceType === 'audio' ? document.createElement('audio') : null;
+    const audioStatus = document.createElement('span');
+    audioStatus.className = 'practice-loop-playback-status';
+    audioStatus.setAttribute('role', 'status');
+    if (audio) {
+      audio.controls = true;
+      audio.loop = true;
+      audio.preload = 'metadata';
+    }
+    const prepareAudio = async () => {
+      practiceButton.disabled = true;
+      audioStatus.textContent = 'Preparing audio...';
+      try {
+        const url = await getDownloadURL(ref(storage, loop.audioPath));
+        if (!row.isConnected) return;
+        audio.src = url;
+        audioStatus.textContent = '';
+        practiceButton.textContent = 'Practice phrase';
+      } catch (error) {
+        if (!row.isConnected) return;
+        console.error('Unable to prepare phrase audio.', error);
+        audioStatus.textContent = 'Audio could not be loaded. Retry to prepare it again.';
+        practiceButton.textContent = 'Retry audio';
+      } finally {
+        practiceButton.disabled = false;
+      }
+    };
+    practiceButton.addEventListener('click', () => {
+      if (audio && !audio.getAttribute('src')) {
+        prepareAudio();
+        return;
+      }
+      toggleInlinePlayer(row, practiceButton, loop, audio);
+    });
     actions.appendChild(practiceButton);
 
     if (isAdmin) {
@@ -487,23 +522,39 @@ function renderPracticeLoops(loops) {
       actions.append(editButton, deleteButton);
     }
 
-    row.append(copy, actions);
+    row.append(copy, actions, audioStatus);
     practiceLoopsList.appendChild(row);
+    if (audio) prepareAudio();
   });
 }
 
-let activeYouTubePlayer = null;
 let youtubeApiPromise = null;
 
 function loadYouTubeApi() {
   if (window.YT && window.YT.Player) return Promise.resolve();
   if (!youtubeApiPromise) {
-    youtubeApiPromise = new Promise((resolve) => {
+    youtubeApiPromise = new Promise((resolve, reject) => {
       const previous = window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady = () => { previous?.(); resolve(); };
       const script = document.createElement('script');
+      const timeout = setTimeout(() => {
+        script.remove();
+        reject(new Error('YouTube player loading timed out.'));
+      }, 15000);
+      window.onYouTubeIframeAPIReady = () => {
+        clearTimeout(timeout);
+        previous?.();
+        resolve();
+      };
       script.src = 'https://www.youtube.com/iframe_api';
+      script.onerror = () => {
+        clearTimeout(timeout);
+        script.remove();
+        reject(new Error('YouTube player could not be loaded.'));
+      };
       document.head.appendChild(script);
+    }).catch((error) => {
+      youtubeApiPromise = null;
+      throw error;
     });
   }
   return youtubeApiPromise;
@@ -516,16 +567,20 @@ function closeInlinePlayers(exceptRow) {
     panel.cleanup?.();
     panel.remove();
     const button = row?.querySelector('.practice-loop-actions .primary-btn');
-    if (button) button.textContent = 'Practice phrase';
+    if (button) {
+      button.textContent = 'Practice phrase';
+      button.setAttribute('aria-expanded', 'false');
+    }
   });
 }
 
-async function toggleInlinePlayer(row, button, loop) {
+async function toggleInlinePlayer(row, button, loop, audio) {
   const existing = row.querySelector('.practice-loop-player');
   if (existing) {
     existing.cleanup?.();
     existing.remove();
     button.textContent = 'Practice phrase';
+    button.setAttribute('aria-expanded', 'false');
     return;
   }
   closeInlinePlayers(row);
@@ -533,49 +588,128 @@ async function toggleInlinePlayer(row, button, loop) {
   panel.className = 'practice-loop-player';
   row.appendChild(panel);
   button.textContent = 'Close player';
+  button.setAttribute('aria-expanded', 'true');
+  const status = document.createElement('p');
+  status.className = 'practice-loop-playback-status';
+  status.setAttribute('role', 'status');
+  const playButton = document.createElement('button');
+  playButton.className = 'secondary-btn small';
+  playButton.type = 'button';
+  playButton.textContent = 'Play phrase';
+  playButton.hidden = true;
+  const showPlaybackError = (error) => {
+    if (!panel.isConnected) return;
+    console.error('Unable to start phrase playback.', error);
+    status.textContent = error.name === 'NotAllowedError'
+      ? 'Your browser requires another tap. Select Play phrase to start.'
+      : 'Playback could not start. Select Play phrase to retry.';
+    playButton.hidden = false;
+  };
 
   if (loop.sourceType === 'audio') {
-    panel.textContent = 'Loading audio...';
-    try {
-      const audio = document.createElement('audio');
-      audio.controls = true;
-      audio.loop = true;
-      audio.preload = 'auto';
-      audio.src = await getDownloadURL(ref(storage, loop.audioPath));
-      panel.replaceChildren(audio);
-      panel.cleanup = () => audio.pause();
-      audio.play().catch(() => {});
-    } catch (error) {
-      console.error('Unable to load phrase audio.', error);
-      panel.textContent = 'Audio could not be loaded.';
-    }
+    panel.append(audio, status, playButton);
+    audio.currentTime = 0;
+    const startAudio = () => audio.play().catch(showPlaybackError);
+    audio.onplaying = () => {
+      status.textContent = '';
+      playButton.hidden = true;
+    };
+    audio.onerror = () => {
+      if (!panel.isConnected) return;
+      console.error('Phrase audio failed to load.', audio.error);
+      status.textContent = 'Audio could not be played. Close the player and try again.';
+    };
+    panel.cleanup = () => {
+      audio.pause();
+      audio.onplaying = null;
+      audio.onerror = null;
+    };
+    playButton.addEventListener('click', startAudio);
+    // Keep play() in the click gesture; resolving a Storage URL here loses mobile playback permission.
+    startAudio();
     return;
   }
 
-  const target = document.createElement('div');
-  panel.replaceChildren(target);
-  await loadYouTubeApi();
-  if (!panel.isConnected) return;
   const start = Math.max(0, Number(loop.startSeconds) || 0);
   const end = Number(loop.endSeconds) || start + 1;
+  const frame = document.createElement('div');
+  frame.className = 'practice-loop-video-frame';
+  const target = document.createElement('iframe');
+  target.title = loop.title || 'Practice phrase video';
+  target.allow = 'autoplay; encrypted-media; picture-in-picture';
+  const videoUrl = new URL(`https://www.youtube.com/embed/${loop.videoId}`);
+  videoUrl.search = new URLSearchParams({
+    start: String(Math.floor(start)), playsinline: '1', rel: '0', autoplay: '1',
+    enablejsapi: '1', fs: '0', origin: window.location.origin
+  }).toString();
+  target.src = videoUrl.href;
+  frame.appendChild(target);
+  status.textContent = 'Loading video...';
+  panel.append(frame, status, playButton);
   let timer = null;
-  const player = new window.YT.Player(target, {
-    videoId: loop.videoId,
-    playerVars: { start: Math.floor(start), playsinline: 1, rel: 0, autoplay: 1 },
-    events: {
-      onReady: () => {
-        timer = setInterval(() => {
-          if (typeof player.getCurrentTime === 'function' && player.getCurrentTime() >= end) player.seekTo(start, true);
-        }, 250);
-      },
-      onStateChange: (event) => {
-        if (event.data === window.YT.PlayerState.ENDED) player.seekTo(start, true);
+  let player = null;
+  panel.cleanup = () => {
+    clearInterval(timer);
+    player?.destroy();
+    target.remove();
+  };
+  playButton.addEventListener('click', () => player?.playVideo());
+  try {
+    await loadYouTubeApi();
+    if (!panel.isConnected) return;
+    player = new window.YT.Player(target, {
+      events: {
+        onReady: (event) => {
+          if (!panel.isConnected) return;
+          event.target.seekTo(start, true);
+          event.target.playVideo();
+          timer = setInterval(() => {
+            if (event.target.getPlayerState() === window.YT.PlayerState.PLAYING
+                && event.target.getCurrentTime() >= end) {
+              event.target.seekTo(start, true);
+            }
+          }, 250);
+        },
+        onStateChange: (event) => {
+          if (!panel.isConnected) return;
+          if (event.data === window.YT.PlayerState.PLAYING) {
+            status.textContent = '';
+            playButton.hidden = true;
+          }
+          if (event.data === window.YT.PlayerState.ENDED) {
+            event.target.seekTo(start, true);
+            event.target.playVideo();
+          }
+        },
+        onAutoplayBlocked: () => {
+          if (!panel.isConnected) return;
+          status.textContent = 'Your browser requires another tap. Select Play phrase to start.';
+          playButton.hidden = false;
+        },
+        onError: (event) => {
+          if (!panel.isConnected) return;
+          console.error('YouTube phrase playback failed.', event.data);
+          const messages = {
+            2: 'The YouTube video link is invalid.',
+            5: 'Your browser could not play this video. Close the player and try again.',
+            100: 'This YouTube video is unavailable.',
+            101: 'The video owner does not allow playback on this website.',
+            150: 'The video owner does not allow playback on this website.'
+          };
+          status.textContent = messages[event.data] || 'YouTube playback failed. Close the player and try again.';
+          playButton.hidden = true;
+        }
       }
-    }
-  });
-  activeYouTubePlayer = player;
-  panel.cleanup = () => { clearInterval(timer); player.destroy?.(); if (activeYouTubePlayer === player) activeYouTubePlayer = null; };
+    });
+  } catch (error) {
+    if (!panel.isConnected) return;
+    panel.cleanup();
+    console.error('Unable to load phrase player.', error);
+    status.textContent = 'Video player could not be loaded. Close it and try again.';
+  }
 }
+
+window.addEventListener('pagehide', () => closeInlinePlayers());
 
 function buildPracticeLoopUrl(loop) {
   const url = new URL('practice.html', window.location.href);
@@ -608,6 +742,7 @@ async function loadPracticeLoops(user = auth.currentUser) {
       ))));
       loops = snapshots.flatMap((snapshot) => snapshot.docs.map((loopDoc) => ({ id: loopDoc.id, ...loopDoc.data() })));
     }
+    if (auth.currentUser?.uid !== user?.uid) return;
     loops.sort((left, right) => String(left.title || '').localeCompare(String(right.title || '')));
     renderPracticeLoops(loops);
   } catch (error) {
@@ -863,6 +998,7 @@ function formatSamay(value) {
 }
 
 async function initialize(user) {
+  closeInlinePlayers();
   currentUser = user;
   isAdmin = false;
   if (isEditing) {

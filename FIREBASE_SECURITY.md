@@ -38,6 +38,16 @@ The website selects Firebase by hostname:
 - `localhost`, `127.0.0.1`, `.local`, and `hcmai-dev.web.app` use `hcmai-dev`.
 - Other hosts use production project `hcmai-v3e0h9`.
 
+Production Google sign-in uses `hcm.streamvik.com` as its authentication domain.
+Keep this domain in Firebase Authentication's authorized domains and
+`https://hcm.streamvik.com/__/auth/handler` in the production Google OAuth web
+client's authorized redirect URIs. Keep existing Firebase redirect URIs as well.
+Development continues to use `hcmai-dev.firebaseapp.com`.
+
+The commands below deploy hosting and access rules only. They leave Moodle
+Cloud Functions unchanged; deploying those functions requires their Secret
+Manager configuration first.
+
 Deploy development rules and hosting with:
 
 ```powershell

@@ -17,7 +17,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css/styles.css?v=20261007-authsheet" />
+    <link rel="stylesheet" href="css/styles.css?v=20261009-looplibrary" />
   </head>
   <body data-page="practice">
     <header class="topbar">
@@ -106,7 +106,7 @@
         <div class="section-surface clip-loop-panel">
           <div class="clip-loop-header">
             <p class="eyebrow">Phrase practice</p>
-            <h2 id="clipLoopTitle">Loop a YouTube clip</h2>
+            <h2 id="clipLoopTitle">Create a practice loop</h2>
           </div>
 
           <form id="clipVideoForm" class="clip-url-form">
@@ -119,7 +119,6 @@
                 autocomplete="url"
                 required
               />
-              <button id="loadClipVideo" class="primary-btn" type="submit">Load video</button>
             </div>
           </form>
           <div class="clip-audio-upload">
@@ -127,18 +126,11 @@
             <input id="clipAudioFile" type="file" accept="audio/*,video/*" />
             <p id="clipAudioFileName" class="clip-audio-file-name" aria-live="polite"></p>
           </div>
+          <button id="loadClipVideo" class="primary-btn clip-load-button" type="submit" form="clipVideoForm">Load video</button>
+          <p class="clip-source-hint">Load a YouTube link with the button above. A selected audio or video file loads automatically.</p>
           <p class="clip-privacy-note">Signed-in users: saved loops, including a copy of the audio for loops cut from an audio file (up to 60 seconds), are stored in your account. Without signing in, only YouTube loop settings are kept in this browser. YouTube audio itself is never stored.</p>
           <p id="clipLoopStatus" class="clip-loop-status" role="status" aria-live="polite"></p>
           <a id="openClipVideoLink" class="clip-fallback-link" target="_blank" rel="noopener noreferrer" hidden>Open video on YouTube</a>
-
-          <section class="saved-loops" aria-labelledby="savedLoopsTitle">
-            <div class="saved-loops-header">
-              <h3 id="savedLoopsTitle">Saved loops</h3>
-              <span id="savedLoopsCount">0 saved</span>
-            </div>
-            <p id="savedLoopsEmpty" class="saved-loops-empty">Your saved loops will appear here.</p>
-            <ul id="savedYouTubeLoops" class="saved-loop-list" aria-labelledby="savedLoopsTitle" hidden></ul>
-          </section>
 
           <div id="clipWorkspace" class="clip-workspace" hidden>
             <div id="clipYoutubeFrame" class="clip-player-frame">
@@ -208,6 +200,33 @@
           </div>
         </div>
       </section>
+      <section class="section-surface saved-loops" aria-labelledby="savedLoopsTitle">
+        <div class="saved-loops-header">
+          <h2 id="savedLoopsTitle">Saved loops</h2>
+          <span id="savedLoopsCount">0 saved</span>
+        </div>
+        <div class="saved-loops-toolbar">
+          <div>
+            <label for="savedLoopsSearch">Search loops</label>
+            <input id="savedLoopsSearch" type="search" placeholder="Name, raag, song, artist, or tags" />
+          </div>
+          <div>
+            <label for="savedLoopsSource">Source</label>
+            <select id="savedLoopsSource">
+              <option value="all">All sources</option>
+              <option value="youtube">YouTube</option>
+              <option value="audio">Audio / video files</option>
+            </select>
+          </div>
+        </div>
+        <p id="savedLoopsEmpty" class="saved-loops-empty" role="status">Your saved loops will appear here.</p>
+        <ul id="savedYouTubeLoops" class="saved-loop-list" aria-labelledby="savedLoopsTitle" hidden></ul>
+        <nav id="savedLoopsPagination" class="saved-loops-pagination" aria-label="Saved loops pages" hidden>
+          <button id="savedLoopsPrevious" class="secondary-btn small" type="button" aria-controls="savedYouTubeLoops">Previous</button>
+          <span id="savedLoopsPageStatus" role="status" aria-live="polite"></span>
+          <button id="savedLoopsNext" class="secondary-btn small" type="button" aria-controls="savedYouTubeLoops">Next</button>
+        </nav>
+      </section>
     </main>
 
     <footer class="site-footer">
@@ -226,7 +245,7 @@
       <a href="practice.html" class="bottom-item active"><span>Practice</span></a>
     </nav>
 
-    <script src="js/main.js?v=20261007-autoloop"></script>
+    <script src="js/main.js?v=20261009-looplibrary"></script>
     <script type="module" src="js/auth.js?v=20261006-savedloops-account-scope"></script>
     <script type="module" src="js/practice-cloud.js?v=20261007-failfast2"></script>
   </body>

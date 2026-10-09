@@ -83,6 +83,12 @@ const clipLoopToggle = document.getElementById('clipLoopToggle');
 const savedLoopsCount = document.getElementById('savedLoopsCount');
 const savedLoopsEmpty = document.getElementById('savedLoopsEmpty');
 const savedYouTubeLoopsList = document.getElementById('savedYouTubeLoops');
+const savedLoopsSearch = document.getElementById('savedLoopsSearch');
+const savedLoopsSource = document.getElementById('savedLoopsSource');
+const savedLoopsPagination = document.getElementById('savedLoopsPagination');
+const savedLoopsPrevious = document.getElementById('savedLoopsPrevious');
+const savedLoopsNext = document.getElementById('savedLoopsNext');
+const savedLoopsPageStatus = document.getElementById('savedLoopsPageStatus');
 const youtubeSavedControls = document.getElementById('youtubeSavedControls');
 const savedClipName = document.getElementById('savedClipName');
 const saveYouTubeLoopButton = document.getElementById('saveYouTubeLoop');
@@ -110,6 +116,8 @@ if (
   let activeClipSource = '';
   let selectedSavedLoopId = '';
   let savedYouTubeLoops = [];
+  let savedLoopsPage = 1;
+  const savedLoopsPageSize = 6;
   let localClipObjectUrl = null;
   let clipClockInterval = null;
   const savedLoopsStoragePrefix = 'hcmai.practice.saved-youtube-loops.v2:';
@@ -205,12 +213,34 @@ if (
   };
 
   const renderSavedYouTubeLoops = () => {
+    const search = (savedLoopsSearch?.value || '').trim().toLowerCase();
+    const source = savedLoopsSource?.value || 'all';
+    const filteredLoops = savedYouTubeLoops.filter((loop) => {
+      const loopSource = loop.sourceType === 'audio' ? 'audio' : 'youtube';
+      const searchableText = [
+        loop.name, loop.songName, loop.raagName, loop.artist, loop.taal,
+        loop.laya, loop.section, loop.notes, loop.sourceName, ...(loop.tags || [])
+      ].filter(Boolean).join(' ').toLowerCase();
+      return (source === 'all' || source === loopSource) && searchableText.includes(search);
+    });
+    const pageCount = Math.max(1, Math.ceil(filteredLoops.length / savedLoopsPageSize));
+    savedLoopsPage = Math.min(savedLoopsPage, pageCount);
+    const firstIndex = (savedLoopsPage - 1) * savedLoopsPageSize;
     savedLoopsCount.textContent = `${savedYouTubeLoops.length} saved`;
-    savedLoopsEmpty.hidden = savedYouTubeLoops.length > 0;
-    savedYouTubeLoopsList.hidden = savedYouTubeLoops.length === 0;
+    savedLoopsEmpty.hidden = filteredLoops.length > 0;
+    savedLoopsEmpty.textContent = savedYouTubeLoops.length
+      ? 'No loops match your search or source filter.'
+      : 'Your saved loops will appear here.';
+    savedYouTubeLoopsList.hidden = filteredLoops.length === 0;
+    if (savedLoopsPagination) {
+      savedLoopsPagination.hidden = filteredLoops.length === 0;
+      savedLoopsPrevious.disabled = savedLoopsPage === 1;
+      savedLoopsNext.disabled = savedLoopsPage === pageCount;
+      savedLoopsPageStatus.textContent = `${firstIndex + 1}-${Math.min(firstIndex + savedLoopsPageSize, filteredLoops.length)} of ${filteredLoops.length} · Page ${savedLoopsPage} of ${pageCount}`;
+    }
     savedYouTubeLoopsList.replaceChildren();
 
-    savedYouTubeLoops.forEach((loop) => {
+    filteredLoops.slice(firstIndex, firstIndex + savedLoopsPageSize).forEach((loop) => {
       const item = document.createElement('li');
       item.className = 'saved-loop-item';
 
@@ -270,9 +300,29 @@ if (
     });
   };
 
+  const resetSavedLoopsPage = () => {
+    savedLoopsPage = 1;
+    renderSavedYouTubeLoops();
+  };
+  savedLoopsSearch?.addEventListener('input', resetSavedLoopsPage);
+  savedLoopsSource?.addEventListener('change', resetSavedLoopsPage);
+  savedLoopsPrevious?.addEventListener('click', () => {
+    savedLoopsPage = Math.max(1, savedLoopsPage - 1);
+    renderSavedYouTubeLoops();
+    savedLoopsPrevious.focus();
+  });
+  savedLoopsNext?.addEventListener('click', () => {
+    savedLoopsPage += 1;
+    renderSavedYouTubeLoops();
+    savedLoopsNext.focus();
+  });
+
   const switchSavedLoopOwner = (uid) => {
     const ownerKey = uid || 'guest';
     currentUid = uid;
+    savedLoopsPage = 1;
+    if (savedLoopsSearch) savedLoopsSearch.value = '';
+    if (savedLoopsSource) savedLoopsSource.value = 'all';
     const nextStorageKey = `${savedLoopsStoragePrefix}${ownerKey}`;
     if (nextStorageKey === savedLoopsStorageKey) {
       savedLoopsOwnerInitialized = true;
@@ -593,6 +643,7 @@ if (
     clipYoutubeFrame.hidden = true;
     clipLocalAudio.hidden = false;
     clipWorkspace.hidden = false;
+    if (savedLoopId) clipWorkspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
     clipFallbackLink.hidden = true;
     clipAudioFileName.textContent = label;
     setClipStatus('Loading audio...');
@@ -687,6 +738,7 @@ if (
     clipLocalAudio.hidden = true;
     clipAudioFileName.textContent = '';
     clipWorkspace.hidden = false;
+    if (savedLoopId) clipWorkspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
     clipStartTime.value = formatClipTime(startSeconds);
     clipEndTime.value = formatClipTime(endSeconds);
     clipLoadButton.disabled = true;
