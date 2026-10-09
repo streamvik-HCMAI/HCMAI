@@ -466,11 +466,12 @@ function renderPracticeLoops(loops) {
       actions.appendChild(statusBadge);
     }
 
-    const practiceLink = document.createElement('a');
-    practiceLink.className = 'primary-btn small';
-    practiceLink.href = buildPracticeLoopUrl(loop);
-    practiceLink.textContent = 'Practice phrase';
-    actions.appendChild(practiceLink);
+    const practiceButton = document.createElement('button');
+    practiceButton.className = 'primary-btn small';
+    practiceButton.type = 'button';
+    practiceButton.textContent = 'Practice phrase';
+    practiceButton.addEventListener('click', () => toggleInlinePlayer(row, practiceButton, loop));
+    actions.appendChild(practiceButton);
 
     if (isAdmin) {
       const editButton = document.createElement('button');
@@ -489,6 +490,91 @@ function renderPracticeLoops(loops) {
     row.append(copy, actions);
     practiceLoopsList.appendChild(row);
   });
+}
+
+let activeYouTubePlayer = null;
+let youtubeApiPromise = null;
+
+function loadYouTubeApi() {
+  if (window.YT && window.YT.Player) return Promise.resolve();
+  if (!youtubeApiPromise) {
+    youtubeApiPromise = new Promise((resolve) => {
+      const previous = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => { previous?.(); resolve(); };
+      const script = document.createElement('script');
+      script.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(script);
+    });
+  }
+  return youtubeApiPromise;
+}
+
+function closeInlinePlayers(exceptRow) {
+  document.querySelectorAll('.practice-loop-player').forEach((panel) => {
+    const row = panel.closest('.practice-loop-row');
+    if (row === exceptRow) return;
+    panel.cleanup?.();
+    panel.remove();
+    const button = row?.querySelector('.practice-loop-actions .primary-btn');
+    if (button) button.textContent = 'Practice phrase';
+  });
+}
+
+async function toggleInlinePlayer(row, button, loop) {
+  const existing = row.querySelector('.practice-loop-player');
+  if (existing) {
+    existing.cleanup?.();
+    existing.remove();
+    button.textContent = 'Practice phrase';
+    return;
+  }
+  closeInlinePlayers(row);
+  const panel = document.createElement('div');
+  panel.className = 'practice-loop-player';
+  row.appendChild(panel);
+  button.textContent = 'Close player';
+
+  if (loop.sourceType === 'audio') {
+    panel.textContent = 'Loading audio...';
+    try {
+      const audio = document.createElement('audio');
+      audio.controls = true;
+      audio.loop = true;
+      audio.preload = 'auto';
+      audio.src = await getDownloadURL(ref(storage, loop.audioPath));
+      panel.replaceChildren(audio);
+      panel.cleanup = () => audio.pause();
+      audio.play().catch(() => {});
+    } catch (error) {
+      console.error('Unable to load phrase audio.', error);
+      panel.textContent = 'Audio could not be loaded.';
+    }
+    return;
+  }
+
+  const target = document.createElement('div');
+  panel.replaceChildren(target);
+  await loadYouTubeApi();
+  if (!panel.isConnected) return;
+  const start = Math.max(0, Number(loop.startSeconds) || 0);
+  const end = Number(loop.endSeconds) || start + 1;
+  let timer = null;
+  const player = new window.YT.Player(target, {
+    videoId: loop.videoId,
+    playerVars: { start: Math.floor(start), playsinline: 1, rel: 0, autoplay: 1 },
+    events: {
+      onReady: () => {
+        timer = setInterval(() => {
+          if (typeof player.getCurrentTime === 'function' && player.getCurrentTime() >= end) player.seekTo(start, true);
+        }, 250);
+      },
+      onStateChange: (event) => {
+        if (event.data === window.YT.PlayerState.ENDED) player.seekTo(start, true);
+      }
+    }
+  });
+  activeYouTubePlayer = player;
+  panel.cleanup = () => { clearInterval(timer); player.destroy?.(); if (activeYouTubePlayer === player) activeYouTubePlayer = null; };
 }
 
 function buildPracticeLoopUrl(loop) {
