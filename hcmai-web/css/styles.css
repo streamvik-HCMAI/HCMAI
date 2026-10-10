@@ -3000,7 +3000,8 @@ input[type="range"] {
   max-width: 100%;
 }
 
-.practice-loop-player > button[hidden] {
+.practice-loop-player > button[hidden],
+.practice-loop-player > a[hidden] {
   display: none;
 }
 

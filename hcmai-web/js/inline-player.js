@@ -103,7 +103,8 @@
     const target = document.createElement('iframe');
     target.title = loop.title || loop.name || 'Practice phrase video';
     target.allow = 'autoplay; encrypted-media; picture-in-picture';
-    const videoUrl = new URL(`https://www.youtube.com/embed/${loop.videoId}`);
+    target.referrerPolicy = 'strict-origin-when-cross-origin';
+    const videoUrl = new URL(`https://www.youtube-nocookie.com/embed/${loop.videoId}`);
     videoUrl.search = new URLSearchParams({
       start: String(Math.floor(start)), playsinline: '1', rel: '0', autoplay: '1',
       enablejsapi: '1', fs: '0', origin: window.location.origin
@@ -111,24 +112,59 @@
     target.src = videoUrl.href;
     frame.appendChild(target);
     status.textContent = 'Loading video...';
-    panel.append(frame, status, playButton);
+    const retryButton = document.createElement('button');
+    retryButton.className = 'secondary-btn small';
+    retryButton.type = 'button';
+    retryButton.textContent = 'Retry video';
+    retryButton.hidden = true;
+    retryButton.addEventListener('click', () => {
+      closeInlinePlayers(row);
+      toggleInlinePlayer(row, button, loop, audio);
+    });
+    const fallback = document.createElement('a');
+    fallback.className = 'clip-fallback-link';
+    fallback.textContent = 'Open this phrase on YouTube';
+    fallback.href = `https://www.youtube.com/watch?v=${loop.videoId}&t=${Math.floor(start)}s`;
+    fallback.target = '_blank';
+    fallback.rel = 'noopener noreferrer';
+    fallback.hidden = true;
+    panel.append(frame, status, playButton, retryButton, fallback);
     let timer = null;
     let player = null;
+    let disposed = false;
+    const showVideoFailure = (message) => {
+      status.textContent = message;
+      playButton.hidden = true;
+      retryButton.hidden = false;
+      fallback.hidden = false;
+    };
+    const loadingTimeout = setTimeout(() => {
+      if (!panel.isConnected) return;
+      panel.cleanup();
+      console.error('YouTube inline player did not become ready.');
+      showVideoFailure('YouTube did not finish loading. Select Retry video. If it still fails, check your connection or browser content-blocking settings.');
+    }, 15000);
     panel.cleanup = () => {
+      disposed = true;
+      clearTimeout(loadingTimeout);
       clearInterval(timer);
       player?.destroy();
+      player = null;
       target.remove();
     };
     playButton.addEventListener('click', () => player?.playVideo());
     try {
       await loadYouTubeApi();
-      if (!panel.isConnected) return;
+      if (!panel.isConnected || disposed) return;
       player = new window.YT.Player(target, {
         events: {
           onReady: (event) => {
-            if (!panel.isConnected) return;
+            if (!panel.isConnected || disposed) return;
+            clearTimeout(loadingTimeout);
             event.target.seekTo(start, true);
             event.target.playVideo();
+            status.textContent = 'Select Play phrase if the video does not start automatically.';
+            playButton.hidden = false;
             timer = setInterval(() => {
               if (event.target.getPlayerState() === window.YT.PlayerState.PLAYING
                   && event.target.getCurrentTime() >= end) {
@@ -137,7 +173,7 @@
             }, 250);
           },
           onStateChange: (event) => {
-            if (!panel.isConnected) return;
+            if (!panel.isConnected || disposed) return;
             if (event.data === window.YT.PlayerState.PLAYING) {
               status.textContent = '';
               playButton.hidden = true;
@@ -148,22 +184,23 @@
             }
           },
           onAutoplayBlocked: () => {
-            if (!panel.isConnected) return;
+            if (!panel.isConnected || disposed) return;
             status.textContent = 'Your browser requires another tap. Select Play phrase to start.';
             playButton.hidden = false;
           },
           onError: (event) => {
-            if (!panel.isConnected) return;
+            if (!panel.isConnected || disposed) return;
+            panel.cleanup();
             console.error('YouTube phrase playback failed.', event.data);
             const messages = {
               2: 'The YouTube video link is invalid.',
               5: 'Your browser could not play this video. Close the player and try again.',
               100: 'This YouTube video is unavailable.',
               101: 'The video owner does not allow playback on this website.',
-              150: 'The video owner does not allow playback on this website.'
+              150: 'The video owner does not allow playback on this website.',
+              153: 'YouTube could not verify this website. Your browser may be blocking the required referrer information.'
             };
-            status.textContent = messages[event.data] || 'YouTube playback failed. Close the player and try again.';
-            playButton.hidden = true;
+            showVideoFailure(messages[event.data] || 'YouTube playback failed. Select Retry video to try again.');
           }
         }
       });
@@ -171,7 +208,7 @@
       if (!panel.isConnected) return;
       panel.cleanup();
       console.error('Unable to load phrase player.', error);
-      status.textContent = 'Video player could not be loaded. Close it and try again.';
+      showVideoFailure('Video player could not be loaded. Select Retry video to try again.');
     }
   }
 
@@ -216,6 +253,6 @@
     if (audio) prepareAudio();
   }
 
-  window.hcmaiInlinePlayers = { attach: attachInlinePlayer, close: closeInlinePlayers };
+  window.hcmaiInlinePlayers = { attach: attachInlinePlayer, close: closeInlinePlayers, loadYouTubeApi };
   window.addEventListener('pagehide', () => closeInlinePlayers());
 })();

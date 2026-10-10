@@ -71,7 +71,6 @@ if (
   clipStartTime && clipEndTime && markClipStart && markClipEnd && clipCurrentTime && clipLoopToggle
 ) {
   let youtubePlayer = null;
-  let youtubeApiPromise = null;
   let playerIsReady = false;
   let loopingClip = false;
   let loopSeekAvailableAt = 0;
@@ -612,19 +611,7 @@ if (
   };
 
   const loadYouTubeApi = () => {
-    if (window.YT?.Player) return Promise.resolve(window.YT);
-    if (youtubeApiPromise) return youtubeApiPromise;
-
-    youtubeApiPromise = new Promise((resolve, reject) => {
-      window.onYouTubeIframeAPIReady = () => resolve(window.YT);
-      const script = document.createElement('script');
-      script.src = 'https://www.youtube.com/iframe_api';
-      script.async = true;
-      script.onerror = () => reject(new Error('YouTube player could not be loaded.'));
-      document.head.append(script);
-    });
-
-    return youtubeApiPromise;
+    return window.hcmaiInlinePlayers.loadYouTubeApi().then(() => window.YT);
   };
 
   const enableClipControls = () => {
@@ -863,8 +850,8 @@ if (
       const YT = await loadYouTubeApi();
       if (!youtubePlayer) initializeYouTubePlayer(YT);
       else youtubePlayer.cueVideoById(currentVideoId);
-    } catch {
-      youtubeApiPromise = null;
+    } catch (error) {
+      console.error('Unable to load YouTube practice editor.', error);
       setClipStatus('YouTube player could not be loaded. Check your connection and try again.');
     } finally {
       clipLoadButton.disabled = false;

@@ -223,6 +223,13 @@ A responsive web version should preserve the same mental model:
 - five ordered featured-loop slots are managed by admins from personal saved loops; publishing creates independent audio copies with public, signed-in, or draft access
 - learners see accessible published featured loops in a swipeable mobile row or desktop card grid; selecting one plays it inline without exposing timestamp, metadata, or save controls
 - featured-loop admin preview continues to open the Practice editor; learner and Raag phrase playback share the same inline player and stop when closed or replaced
+- inline YouTube playback uses privacy-enhanced embeds with an explicit referrer
+  policy; a 15-second readiness timeout stops an unresponsive player and offers
+  an inline retry instead of leaving a blank frame indefinitely. Playback that
+  requires another tap exposes Play phrase. A timestamped YouTube link is shown
+  only after an error; opening it is optional and never automatic
+- Practice editor and inline players share one YouTube API loader to avoid
+  overwriting each other's ready callbacks
 - Raag add/edit phrase forms appear before the existing phrase list, with width-constrained source selectors
 
 Admins configure Featured slots 1-5 on the Practice page by choosing a personal
@@ -233,6 +240,10 @@ The slots display in numeric order; choosing a different loop replaces a slot.
 Run `node --test tools/test-featured-loops.cjs` to validate featured-copy API
 behavior. These tests mock Firebase boundaries; rule compilation is validated
 separately with a Firebase deployment dry run.
+
+Run `node --test tools/test-inline-player.cjs` for guest embed configuration,
+readiness timeouts, retry, autoplay controls, looping, error handling, and shared
+API loading. These tests mock YouTube callbacks, not actual media playback.
 
 Run `node --test tools/test-tabla.cjs` for taal structure, bundled recording
 validity, loading errors, layering, subdivision/rest timing, tempo bounds,
