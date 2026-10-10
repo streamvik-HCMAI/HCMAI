@@ -50,7 +50,6 @@
             <h1>Practice Studio</h1>
           </div>
 
-          <audio id="tanpuraAudio" loop preload="none"></audio>
           <button id="playToggle" type="button" class="play-button" aria-label="Play accompaniment" aria-pressed="false">
             <span id="playIcon">▶</span>
           </button>
@@ -70,6 +69,7 @@
             <span>Selected scale</span>
             <strong id="selectedScaleLabel">C</strong>
           </div>
+          <p id="tanpuraTuning" class="tabla-help">Sa: C3 (130.81 Hz). A4 = 440 Hz.</p>
 
           <div class="scale-grid" id="scaleGrid">
             <button class="scale-btn active">C</button>
@@ -85,6 +85,7 @@
             <button class="scale-btn">A#</button>
             <button class="scale-btn">B</button>
           </div>
+          <p class="tabla-help">One calibrated recorded tanpura across all scales. Transposition changes the pluck speed, independently of tabla tempo. <a href="assets/tanpura/CREDITS.txt" target="_blank" rel="noopener">Recording and tuning details</a>.</p>
         </div>
 
         <aside class="section-surface practice-sidebar tabla-panel" aria-labelledby="tablaTitle">
@@ -271,7 +272,7 @@
 
     <script src="js/inline-player.js?v=20261009-guest-player"></script>
     <script src="js/main.js?v=20261009-guest-player"></script>
-    <script type="module" src="js/tabla.js?v=20261009-recorded-tabla"></script>
+    <script type="module" src="js/tabla.js?v=20261010-calibrated-tanpura"></script>
     <script type="module" src="js/auth.js?v=20261006-savedloops-account-scope"></script>
     <script type="module" src="js/practice-cloud.js?v=20261009-featured"></script>
   </body>

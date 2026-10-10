@@ -1,3 +1,5 @@
+import { createTanpuraPlayer, loadTanpuraSample, tanpuraFrequency } from './tanpura.js?v=20261010-calibrated-tanpura';
+
 export const TAALS = [
   { id: 'teentaal', name: 'Teentaal', groups: [4, 4, 4, 4], khali: [9], bols: ['Dha', 'Dhin', 'Dhin', 'Dha', 'Dha', 'Dhin', 'Dhin', 'Dha', 'Dha', 'Tin', 'Tin', 'Ta', 'Ta', 'Dhin', 'Dhin', 'Dha'] },
   { id: 'ektaal', name: 'Ektaal', groups: [2, 2, 2, 2, 2, 2], khali: [3, 7], bols: ['Dhin', 'Dhin', 'Dha Ge', 'Ti Ra Ki Ta', 'Tu', 'Na', 'Kat', 'Ta', 'Dha Ge', 'Ti Ra Ki Ta', 'Dhin', 'Na'] },
@@ -141,14 +143,16 @@ function initializeTabla() {
   const status = document.getElementById('accompanimentStatus');
   const tanpuraEnabled = document.getElementById('tanpuraEnabled');
   const tablaEnabled = document.getElementById('tablaEnabled');
-  const tanpura = document.getElementById('tanpuraAudio');
   const scaleLabel = document.getElementById('selectedScaleLabel');
+  const tuningLabel = document.getElementById('tanpuraTuning');
   const scaleButtons = document.querySelectorAll('.scale-btn');
   const structure = document.getElementById('tablaStructure');
   const cycle = document.getElementById('tablaCycle');
   let context = null;
   let player = null;
   let preparation = null;
+  let tanpura = null;
+  let dronePreparation = null;
   let playing = false;
   let request = 0;
   let beatElements = [];
@@ -169,22 +173,25 @@ function initializeTabla() {
   const stop = (message = 'Paused. Play restarts tabla from sam.') => {
     request++;
     player?.stop();
-    tanpura.pause();
+    tanpura?.stop();
     playing = false;
     updateButton();
     status.textContent = message;
   };
-  const prepareTabla = () => {
+  const prepareContext = () => {
     if (!context) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) throw new Error('This browser does not support recorded tabla playback.');
+      if (!AudioContextClass) throw new Error('This browser does not support recorded accompaniment playback.');
       context = new AudioContextClass();
       context.addEventListener('statechange', () => {
-        if (playing && tablaEnabled.checked && context.state !== 'running') {
-          stop('Tabla audio was interrupted. Select Play accompaniment to restart.');
+        if (playing && context.state !== 'running') {
+          stop('Accompaniment audio was interrupted. Select Play accompaniment to restart.');
         }
       });
     }
+    return context;
+  };
+  const prepareTabla = () => {
     if (!preparation) {
       preparation = loadTablaSamples(context).then((buffers) => {
         player = createTablaPlayer(context, buffers, showBeat);
@@ -196,6 +203,18 @@ function initializeTabla() {
     }
     return preparation;
   };
+  const prepareTanpura = () => {
+    if (!dronePreparation) {
+      dronePreparation = loadTanpuraSample(context).then((buffer) => {
+        tanpura = createTanpuraPlayer(context, buffer);
+        return tanpura;
+      }).catch((error) => {
+        dronePreparation = null;
+        throw error;
+      });
+    }
+    return dronePreparation;
+  };
   const synchronize = async () => {
     if (!tanpuraEnabled.checked && !tablaEnabled.checked) {
       stop('Both instruments are off. Switch on Tanpura or Tabla to play.');
@@ -206,21 +225,22 @@ function initializeTabla() {
     updateButton();
     status.textContent = 'Starting selected instruments...';
     try {
-      // Start/resume both media paths in the click gesture before awaiting downloads.
-      const droneStart = tanpuraEnabled.checked ? tanpura.play() : (tanpura.pause(), Promise.resolve());
-      let tablaStart = Promise.resolve();
-      if (tablaEnabled.checked) {
-        tablaStart = (async () => {
-          const prepared = prepareTabla();
-          await Promise.all([prepared, context.resume()]);
-        })();
-      } else {
-        player?.stop();
-      }
-      await Promise.all([droneStart, tablaStart]);
+      // Resume the shared audio context in the click gesture, before downloads.
+      const resumed = prepareContext().resume();
+      if (!tanpuraEnabled.checked) tanpura?.stop();
+      if (!tablaEnabled.checked) player?.stop();
+      await Promise.all([
+        resumed,
+        tanpuraEnabled.checked ? prepareTanpura() : Promise.resolve(),
+        tablaEnabled.checked ? prepareTabla() : Promise.resolve()
+      ]);
       if (currentRequest !== request) return;
+      if (context.state !== 'running') throw new Error('Accompaniment audio is blocked.');
+      if (tanpuraEnabled.checked) {
+        tanpura.setScale(scaleLabel.textContent);
+        tanpura.start();
+      }
       if (tablaEnabled.checked) {
-        if (context.state !== 'running') throw new Error('Tabla audio is blocked. Select Play accompaniment to retry.');
         player.setTempo(Number(tempo.value));
         player.setVolume(Number(volume.value) / 100);
         if (!player.isPlaying()) {
@@ -294,20 +314,17 @@ function initializeTabla() {
       }
     });
   });
-  tanpura.src = 'assets/tanpura_C.mp3';
-  tanpura.addEventListener('error', () => {
-    if (playing && tanpuraEnabled.checked) {
-      console.error('Tanpura recording failed to load.', tanpura.error);
-      stop('Tanpura audio could not load. Select another scale or switch Tanpura off and retry.');
-    }
-  });
+  const showTuning = () => {
+    tuningLabel.textContent = `Sa: ${scaleLabel.textContent}3 (${tanpuraFrequency(scaleLabel.textContent).toFixed(2)} Hz). A4 = 440 Hz.`;
+  };
+  showTuning();
   scaleButtons.forEach((button) => {
     button.addEventListener('click', () => {
       scaleButtons.forEach((entry) => entry.classList.toggle('active', entry === button));
       const scale = button.textContent.trim();
       scaleLabel.textContent = scale;
-      tanpura.src = `assets/tanpura_${scale.replace('#', 'sharp')}.mp3`;
-      tanpura.playbackRate = ['G#', 'A', 'B'].includes(scale) ? Math.pow(2, -1 / 12) : 1;
+      showTuning();
+      tanpura?.setScale(scale);
       if (playing) synchronize();
     });
   });

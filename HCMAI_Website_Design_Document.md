@@ -193,9 +193,20 @@ A responsive web version should preserve the same mental model:
 ## 6. Core Features
 
 ### Practice features
-- scale-based tanpura/drone playback
-- continuous looping audio for riyaz
-- scale selection across multiple tones
+- calibrated recorded tanpura playback from one 14-second mono PCM loop, rather
+  than twelve inconsistently tuned MP3 recordings. All scales share the same
+  string configuration, loudness, and crossfaded loop seam
+- explicit Sa reference C3-B3, A4 = 440 Hz. Web Audio buffer playback rate is
+  target frequency divided by the source's measured tonic (173.72 Hz), avoiding
+  HTML audio's pitch-preserving playback-rate behavior. Retuning changes the
+  existing voice without reloading or restarting tabla
+- recorded Pa retains a natural 3:2 fifth. Transposition changes pluck cadence
+  and timbre; it is not tempo-preserving pitch shifting. Tabla tempo remains
+  independent. Natural jivari/string motion is not removed
+- source/provenance, processing, calibration, and license limitations are
+  documented in [tanpura recording details](hcmai-web/assets/tanpura/CREDITS.txt).
+  The existing recording was reused with owner approval; its original
+  redistribution license remains undocumented, unlike the CC0 tabla kit
 - a Tabla taal panel replaces the session controls/timer, with ten basic thekas:
   Teentaal, Ektaal, Jhaptaal, Rupak, Dadra, Keharwa, Deepchandi, Tilwada, Dhamar,
   and Chautal
@@ -244,6 +255,17 @@ separately with a Firebase deployment dry run.
 Run `node --test tools/test-inline-player.cjs` for guest embed configuration,
 readiness timeouts, retry, autoplay controls, looping, error handling, and shared
 API loading. These tests mock YouTube callbacks, not actual media playback.
+
+Run `node --test tools/test-tanpura.cjs` for target frequencies, native buffer
+retuning, normalized WAV/seam checks, shared instrument controls, interrupted
+playback, pending-download cancellation, and visible failure/retry behavior.
+Run `node tools/prepare-tanpura.cjs` and open `http://127.0.0.1:8766/verify` for
+actual OfflineAudioContext rendering at all twelve scales. Eight sampled
+windows per scale, including wrap, must remain within 5 cents for Sa and
+6 cents for recorded Pa, with under 1 dB scale-to-scale RMS variation and
+no clipping. Stop this localhost-only builder/check server after use.
+The root page rebuilds the WAV from the existing MP3; rebuilding is not required
+to run the verification. See recording details for measured results and limits.
 
 Run `node --test tools/test-tabla.cjs` for taal structure, bundled recording
 validity, loading errors, layering, subdivision/rest timing, tempo bounds,

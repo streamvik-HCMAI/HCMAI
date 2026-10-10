@@ -1,0 +1,59 @@
+Recorded tanpura source and tuning
+================================
+
+Source: the website's existing assets/tanpura_F.mp3, already present in this
+repository in commit a83e21e. No external recording was downloaded for this
+correction. The owner approved reusing this existing recording.
+
+The original creator, recording source, and redistribution license are not
+documented in the repository. Reuse does not establish a new license or imply
+CC0/public-domain status. The website owner should retain/establish permission
+for the original recording. This is separate from the CC0 tabla recordings.
+
+Original MP3 SHA-256:
+ea4e522de311037cd4c96b9aaa23392fdadd521c9b53a0f26a58c1e0de79322d
+Bundled loop.wav SHA-256:
+588cb60047fbe5129ee2e1baec45090028370bded57f2e159d713a68b239f5b4
+
+Processing:
+- Decode the original MP3 using the browser's native audio decoder, with
+  band-limited sample-rate conversion to mono 24 kHz.
+- Extract seconds 32-48. Overlap the final two seconds with the initial two
+  seconds using a linear crossfade, yielding a continuous 14-second loop.
+- Normalize its peak to 0.8 and export mono 16-bit PCM WAV (672,044 bytes).
+- No synthesized strings, replacement strokes, or additional recordings.
+
+Tuning:
+- The untransposed loop's reference tonic is measured as 173.72 Hz.
+- All twelve scale buttons use the same loop via Web Audio AudioBufferSourceNode.
+- Target Sa is C3 through B3, twelve-tone equal temperament with A4 = 440 Hz.
+- Playback rate = target Sa frequency / 173.72. Browser HTML-media
+  preservesPitch settings do not affect this audio path.
+- Recorded Pa follows a natural fifth (3:2, or its lower octave), not the
+  slightly narrower equal-tempered fifth. Other strings/overtones remain
+  relationships from this recording, rather than independently synthesized tones.
+- Transposition also changes pluck cadence and timbre. Tabla tempo is
+  independent. This implementation is not tempo-preserving pitch shifting.
+- Natural jivari/recorded string motion remains; calibration is not a claim
+  of perfectly stationary sine-wave pitch.
+
+Validation (Chromium Web Audio, 2026-10-09):
+- Actual player rendered at all twelve scales, 48 kHz, eight two-second
+  source-equivalent windows per scale, including loop wrap.
+- Hann-windowed local spectral searches near Sa and Pa, approximately
+  0.29-cent frequency-grid resolution.
+- Maximum sampled Sa error: 4.35 cents (required <= 5).
+- Maximum sampled Pa error: 5.18 cents (required <= 6).
+- Scale RMS variation: 0.01 dB (required <= 1).
+- No clipping; PCM wrap discontinuity smaller than ordinary sample steps.
+- These are sampled spectral checks, not a full perceptual/musical certification.
+
+Rebuild from the repository root:
+  node tools\prepare-tanpura.cjs
+Open http://127.0.0.1:8766 in a browser to generate loop.wav.
+Open http://127.0.0.1:8766/verify for actual Web Audio tuning/loudness checks.
+Stop the local builder after use. Regenerating with another decoder/browser
+may change PCM bytes; revalidate measurements and update the hash if needed.
+
+Regression tests:
+  node --test tools\test-tanpura.cjs tools\test-tabla.cjs

@@ -31,6 +31,7 @@ function setup() {
     }
   };
   const source = fs.readFileSync(path.join(__dirname, '..', 'hcmai-web', 'js', 'tabla.js'), 'utf8')
+    .replace(/^import .*;\r?\n/gm, '')
     .replace(/^export /gm, '');
   const scope = {
     setInterval(callback, delay) { assert.equal(delay, 25); tick = callback; return 1; },
@@ -191,6 +192,7 @@ test('missing recordings are rejected, not replaced by synthesized audio', () =>
 
 test('sample loading decodes all local recordings and reports download or decoding errors', async () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'hcmai-web', 'js', 'tabla.js'), 'utf8')
+    .replace(/^import .*;\r?\n/gm, '')
     .replace(/^export /gm, '');
   const urls = [];
   let failure = false;
