@@ -196,6 +196,24 @@ A responsive web version should preserve the same mental model:
 - scale-based tanpura/drone playback
 - continuous looping audio for riyaz
 - scale selection across multiple tones
+- a Tabla taal panel replaces the session controls/timer, with ten basic thekas:
+  Teentaal, Ektaal, Jhaptaal, Rupak, Dadra, Keharwa, Deepchandi, Tilwada, Dhamar,
+  and Chautal
+- real CC0 tabla stroke recordings by mmiron are bundled locally and sequenced
+  with Web Audio, without a synthesized fallback; the limited-kit mappings,
+  original sources, mirror, and modifications are documented in
+  [audio credits](hcmai-web/assets/tabla/CREDITS.txt). These are arranged stroke
+  recordings, not complete recorded performances of each taal. Dhamar and
+  Chautal are labelled as pakhawaj-associated tabla-kit adaptations
+- one shared Play/Pause button controls the tanpura and tabla, with independent
+  on/off switches (both initially on); switching off both pauses playback and
+  disables Play until an instrument is enabled. Switching on tabla during
+  playback starts it at sam. Tabla has a separate volume control
+- laya presets use 48/96/168 BPM as adjustable starting points,
+  and the tempo slider supports 30-240 BPM (one matra per beat)
+- the beat display marks sam, taali, khali, subdivisions, and rests; changing
+  taal restarts at sam, tempo changes retain the cycle, and leaving the tab or
+  interrupted audio stops playback explicitly until the user restarts
 - loop creation from YouTube links or local audio/video files, with the Load video button below both source options (local files load on selection)
 - player, timestamp controls, and loop-saving controls appear before a separate saved-loop library
 - saved-loop library uses compact cards, searches names and metadata, filters by source, and displays six loops per page
@@ -215,6 +233,17 @@ The slots display in numeric order; choosing a different loop replaces a slot.
 Run `node --test tools/test-featured-loops.cjs` to validate featured-copy API
 behavior. These tests mock Firebase boundaries; rule compilation is validated
 separately with a Firebase deployment dry run.
+
+Run `node --test tools/test-tabla.cjs` for taal structure, bundled recording
+validity, loading errors, layering, subdivision/rest timing, tempo bounds,
+cycle repetition, and playback cleanup.
+These tests mock the audio clock; browser checks also validate Web Audio output
+and shared instrument controls. Tempo changes affect stroke spacing, not sample
+pitch. Failed audio loading stops accompaniment with a visible retry message,
+never silently substitutes synthetic sounds. Thekas are basic practice variants, not exhaustive
+gharana-specific arrangements. Reference: [SwarGanga taal concepts](https://www.swarganga.org/articles/icmconcepts/icm20),
+[Tilwada](https://en.wikipedia.org/wiki/Tilwada), and
+[Dhamar](https://en.wikipedia.org/wiki/Dhamar_(music)).
 
 ### Composition features
 - swara note entry

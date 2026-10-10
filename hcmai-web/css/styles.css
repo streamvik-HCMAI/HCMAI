@@ -1355,29 +1355,132 @@ input[type="range"] {
   width: 100%;
 }
 
-.timer-box {
+.tabla-panel {
+  min-width: 0;
+}
+
+.tabla-panel h2 {
+  font-size: 1.4rem;
+  margin-bottom: 12px;
+}
+
+.tabla-help {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 10px 0 16px;
+}
+
+.tabla-panel select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.tabla-panel .control-group .tabla-help {
+  margin: 0;
+}
+
+.tabla-help a {
+  text-decoration: underline;
+}
+
+.accompaniment-switches {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.instrument-switch {
+  display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--stroke);
   border-radius: 14px;
-  background: rgba(18, 24, 38, 0.02);
+  font-weight: 600;
+  cursor: pointer;
 }
 
-.practice-queue {
-  margin-top: 12px;
-}
-
-.practice-queue h4 {
-  margin-bottom: 10px;
-}
-
-.practice-queue ul {
+.instrument-switch input {
+  appearance: none;
+  width: 44px;
+  height: 26px;
   margin: 0;
-  padding-left: 18px;
+  border-radius: 20px;
+  background: var(--muted);
+  cursor: pointer;
+}
+
+.instrument-switch input::before {
+  content: "";
+  display: block;
+  width: 20px;
+  height: 20px;
+  margin: 3px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.15s;
+}
+
+.instrument-switch input:checked {
+  background: var(--green);
+}
+
+.instrument-switch input:checked::before {
+  transform: translateX(18px);
+}
+
+.instrument-switch input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.tabla-cycle {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.tabla-beat {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px 4px;
+  text-align: center;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: rgba(18, 24, 38, 0.04);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.tabla-beat small {
   color: var(--muted);
-  line-height: 1.9;
+}
+
+.tabla-beat.vibhag-start {
+  border-left-color: var(--muted);
+}
+
+.tabla-beat.active {
+  border-color: var(--primary);
+  background: rgba(29, 122, 242, 0.12);
+}
+
+.tabla-beat[aria-current="true"] strong {
+  color: var(--primary);
 }
 
 .clip-loop-section {

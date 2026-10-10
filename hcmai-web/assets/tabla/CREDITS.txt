@@ -1,0 +1,43 @@
+Real tabla recordings used by HCMAI
+==================================
+
+Creator: mmiron
+Original collection: https://freesound.org/people/mmiron/packs/8162/
+License: CC0 1.0 Universal (public domain dedication)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Local file       Original recording and source page
+ghe.wav          130406__mmiron__ghe.wav
+                 https://freesound.org/people/mmiron/sounds/130406/
+ke.wav           130413__mmiron__ke.wav
+                 https://freesound.org/people/mmiron/sounds/130413/
+te.wav           130429__mmiron__te.wav
+                 https://freesound.org/people/mmiron/sounds/130429/
+na.wav           130421__mmiron__na.wav
+                 https://freesound.org/people/mmiron/sounds/130421/
+naopen.wav       130422__mmiron__na-open.wav
+                 https://freesound.org/people/mmiron/sounds/130422/
+tun.wav          130416__mmiron__tun.wav
+                 https://freesound.org/people/mmiron/sounds/130416/
+
+Each original source identifies the recording as a tabla stroke and licenses
+it under CC0. The audio is not synthesized.
+
+Download mirror:
+https://github.com/harshagrawal13/pancham/blob/0f996557b2f5c24cb620c8eac2a9cde47143d599/Pancham/Resources/Sounds/tabla.sf2
+Provenance/build mapping:
+https://github.com/harshagrawal13/pancham/blob/0f996557b2f5c24cb620c8eac2a9cde47143d599/Tools/build_tabla_sf2.py
+
+Only the six mmiron sample regions were extracted from the SoundFont. No code,
+other instruments, or recordings by other creators were copied.
+The mirror has downmixed to mono PCM, aligned attacks, normalized loudness,
+and faded tails. HCMAI wraps this PCM in 16-bit, 44.1 kHz WAV files.
+
+The player sequences and layers these recorded strokes into basic thekas:
+Na = na, Tin/Di = naopen, Tu = tun, Ge/Ga = ghe,
+Ta/Ti/Ra = te, Ki/Ka/Kat = ke.
+Dha layers na + ghe; Dhin/Dhi layer naopen + ghe.
+These are a limited-kit practice arrangement, not recordings of a musician
+performing each complete taal or a full set of distinct bol articulations.
+Dhamar and Chautal are tabla-kit adaptations of pakhawaj-associated taals.
+Changing tempo changes stroke spacing, not the pitch of the recordings.
